@@ -1,0 +1,57 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "target-release",
+      "displayName": "STM32G030K6 Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/target",
+      "toolchainFile": "${sourceDir}/cmake/arm-none-eabi-gcc.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "GALILEOSKY_PLATFORM": "stm32g030"
+      }
+    },
+    {
+      "name": "linux-desktop-release",
+      "displayName": "Linux Desktop Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/linux-desktop",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_COMPILER": "g++",
+        "GALILEOSKY_PLATFORM": "desktop"
+      }
+    },
+    {
+      "name": "windows-desktop-release",
+      "displayName": "Windows Desktop Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/windows-desktop",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_COMPILER": "g++",
+        "GALILEOSKY_PLATFORM": "desktop"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "target-release",
+      "configurePreset": "target-release"
+    },
+    {
+      "name": "linux-desktop-release",
+      "configurePreset": "linux-desktop-release"
+    },
+    {
+      "name": "windows-desktop-release",
+      "configurePreset": "windows-desktop-release"
+    }
+  ]
+}
