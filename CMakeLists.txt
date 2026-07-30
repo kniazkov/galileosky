@@ -12,7 +12,10 @@ set_property(CACHE GALILEOSKY_PLATFORM PROPERTY STRINGS desktop stm32g030)
 
 add_executable(${PROJECT_NAME}
     src/application.cpp
+    src/can.cpp
     src/main.cpp
+    src/obd2.cpp
+    src/vehicle.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -21,6 +24,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 if(GALILEOSKY_PLATFORM STREQUAL "desktop")
     target_sources(${PROJECT_NAME} PRIVATE
+        platform/desktop/can_driver.cpp
         platform/desktop/runner.cpp
     )
 
@@ -63,6 +67,7 @@ elseif(GALILEOSKY_PLATFORM STREQUAL "stm32g030")
     enable_language(ASM)
 
     target_sources(${PROJECT_NAME} PRIVATE
+        platform/stm32g030/can_driver.cpp
         platform/stm32g030/runner.cpp
         platform/stm32g030/runtime.cpp
         startup/startup_stm32g030.s
@@ -81,6 +86,9 @@ elseif(GALILEOSKY_PLATFORM STREQUAL "stm32g030")
         $<$<COMPILE_LANGUAGE:CXX>:-fno-use-cxa-atexit>
         $<$<COMPILE_LANGUAGE:CXX>:-fno-unwind-tables>
         $<$<COMPILE_LANGUAGE:CXX>:-fno-asynchronous-unwind-tables>
+        # Не используем Thumb-1 helper таблиц переходов из libgcc: в некоторых
+        # toolchain он не содержит отметку о неисполняемом стеке.
+        $<$<COMPILE_LANGUAGE:CXX>:-fno-jump-tables>
         $<$<COMPILE_LANGUAGE:CXX>:-fstack-usage>
         $<$<COMPILE_LANGUAGE:CXX>:-Wa,--noexecstack>
         $<$<COMPILE_LANGUAGE:CXX>:-Wall>
@@ -99,6 +107,8 @@ elseif(GALILEOSKY_PLATFORM STREQUAL "stm32g030")
         -Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.map
         -T${CMAKE_CURRENT_SOURCE_DIR}/linker/stm32g030k6.ld
     )
+
+    target_link_libraries(${PROJECT_NAME} PRIVATE gcc)
 
     set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".elf")
 

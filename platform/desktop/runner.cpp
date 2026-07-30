@@ -9,8 +9,11 @@
  */
 
 #include "application/application.hpp"
+#include "drivers/can.hpp"
+#include "platform/desktop/can_adapter.hpp"
 #include "platform/runtime.hpp"
 
+#include <array>
 #include <cctype>
 #include <cstdint>
 #include <iostream>
@@ -30,6 +33,7 @@ constexpr std::size_t maximum_ticks_per_command = 1'024U;
 enum class Command {
     tick,
     advance,
+    can_rx,
     snapshot,
     reset,
     shutdown
@@ -42,6 +46,7 @@ struct Request {
     std::uint64_t id;
     Command command;
     std::uint32_t argument;
+    drivers::can::Frame can_frame;
 };
 
 /**
@@ -181,6 +186,38 @@ public:
     }
 
     /**
+     * @brief Считывает массив байтов полезной нагрузки CAN.
+     * @return Количество считанных байтов.
+     */
+    std::uint8_t read_byte_array(
+        std::array<std::uint8_t, drivers::can::maximum_data_length>& values)
+    {
+        expect('[');
+        std::uint8_t length = 0U;
+        if (consume(']')) {
+            return length;
+        }
+
+        for (;;) {
+            if (length == values.size()) {
+                throw ProtocolError{"полезная нагрузка CAN длиннее восьми байт"};
+            }
+
+            const std::uint64_t value = read_unsigned();
+            if (value > std::numeric_limits<std::uint8_t>::max()) {
+                throw ProtocolError{"байт CAN не помещается в 8 бит"};
+            }
+            values[length] = static_cast<std::uint8_t>(value);
+            ++length;
+
+            if (consume(']')) {
+                return length;
+            }
+            expect(',');
+        }
+    }
+
+    /**
      * @brief Проверяет отсутствие данных после разобранного объекта.
      */
     void finish()
@@ -223,6 +260,9 @@ Command parse_command(const std::string& value)
     if (value == "advance") {
         return Command::advance;
     }
+    if (value == "can_rx") {
+        return Command::can_rx;
+    }
     if (value == "snapshot") {
         return Command::snapshot;
     }
@@ -243,11 +283,14 @@ Request parse_request(const std::string& line)
     std::uint64_t id = 0U;
     std::uint32_t timestamp_ms = 0U;
     std::uint32_t milliseconds = 0U;
+    drivers::can::Frame can_frame{};
     std::string command_text;
     bool has_id = false;
     bool has_command = false;
     bool has_timestamp = false;
     bool has_milliseconds = false;
+    bool has_can_id = false;
+    bool has_can_data = false;
 
     if (!reader.consume('}')) {
         for (;;) {
@@ -278,6 +321,23 @@ Request parse_request(const std::string& line)
                 }
                 milliseconds = narrow_to_u32(reader.read_unsigned());
                 has_milliseconds = true;
+            } else if (key == "can_id") {
+                if (has_can_id) {
+                    throw ProtocolError{"поле can_id указано несколько раз"};
+                }
+                const std::uint64_t identifier = reader.read_unsigned();
+                if (identifier > drivers::can::maximum_identifier) {
+                    throw ProtocolError{"can_id должен быть 11-битным"};
+                }
+                can_frame.identifier =
+                    static_cast<std::uint16_t>(identifier);
+                has_can_id = true;
+            } else if (key == "data") {
+                if (has_can_data) {
+                    throw ProtocolError{"поле data указано несколько раз"};
+                }
+                can_frame.length = reader.read_byte_array(can_frame.data);
+                has_can_data = true;
             } else {
                 throw ProtocolError{"неизвестное поле команды"};
             }
@@ -297,22 +357,27 @@ Request parse_request(const std::string& line)
     const Command command = parse_command(command_text);
     switch (command) {
     case Command::tick:
-        if (!has_timestamp || has_milliseconds) {
+        if (!has_timestamp || has_milliseconds || has_can_id || has_can_data) {
             throw ProtocolError{"команде tick требуется только timestamp_ms"};
         }
-        return Request{id, command, timestamp_ms};
+        return Request{id, command, timestamp_ms, {}};
     case Command::advance:
-        if (!has_milliseconds || has_timestamp) {
+        if (!has_milliseconds || has_timestamp || has_can_id || has_can_data) {
             throw ProtocolError{"команде advance требуется только milliseconds"};
         }
-        return Request{id, command, milliseconds};
+        return Request{id, command, milliseconds, {}};
+    case Command::can_rx:
+        if (has_timestamp || has_milliseconds || !has_can_id || !has_can_data) {
+            throw ProtocolError{"команде can_rx требуются can_id и data"};
+        }
+        return Request{id, command, 0U, can_frame};
     case Command::snapshot:
     case Command::reset:
     case Command::shutdown:
-        if (has_timestamp || has_milliseconds) {
+        if (has_timestamp || has_milliseconds || has_can_id || has_can_data) {
             throw ProtocolError{"команда не принимает числовой аргумент"};
         }
-        return Request{id, command, 0U};
+        return Request{id, command, 0U, {}};
     }
 
     throw ProtocolError{"невозможное значение команды"};
@@ -378,7 +443,11 @@ public:
     void send_state(const std::uint64_t id, const bool force_full)
     {
         const application::StateSnapshot state = application::snapshot();
-        if (!force_full && reported_ && state.revision == last_revision_) {
+        const bool application_changed =
+            !reported_ || state.revision != last_revision_;
+        const bool vehicle_changed =
+            state.vehicle.revision != last_vehicle_revision_;
+        if (!force_full && !application_changed && !vehicle_changed) {
             return;
         }
 
@@ -386,11 +455,42 @@ public:
             << "{\"id\":" << id
             << ",\"type\":\"state\",\"full\":"
             << (force_full ? "true" : "false")
-            << ",\"state\":{\"timestamp_ms\":" << state.timestamp_ms
-            << ",\"revision\":" << state.revision
-            << "}}" << std::endl;
+            << ",\"state\":{";
+
+        bool field_written = false;
+        if (force_full || application_changed) {
+            std::cout
+                << "\"timestamp_ms\":" << state.timestamp_ms
+                << ",\"revision\":" << state.revision;
+            field_written = true;
+        }
+
+        if (force_full || vehicle_changed) {
+            if (field_written) {
+                std::cout << ',';
+            }
+            std::cout
+                << "\"vehicle\":{"
+                << "\"engine_speed_rpm\":"
+                << state.vehicle.engine_speed_rpm
+                << ",\"vehicle_speed_kmh\":"
+                << static_cast<unsigned int>(state.vehicle.vehicle_speed_kmh)
+                << ",\"coolant_temperature_c\":"
+                << state.vehicle.coolant_temperature_c
+                << ",\"fuel_level_percent\":"
+                << static_cast<unsigned int>(state.vehicle.fuel_level_percent)
+                << ",\"check_engine\":"
+                << (state.vehicle.check_engine ? "true" : "false")
+                << ",\"valid_mask\":"
+                << static_cast<unsigned int>(state.vehicle.valid_mask)
+                << ",\"revision\":" << state.vehicle.revision
+                << '}';
+        }
+
+        std::cout << "}}" << std::endl;
 
         last_revision_ = state.revision;
+        last_vehicle_revision_ = state.vehicle.revision;
         reported_ = true;
     }
 
@@ -400,12 +500,34 @@ public:
     void invalidate()
     {
         reported_ = false;
+        last_vehicle_revision_ = 0U;
     }
 
 private:
     std::uint32_t last_revision_{};
+    std::uint32_t last_vehicle_revision_{};
     bool reported_{};
 };
+
+void send_can_frames(const std::uint64_t id)
+{
+    drivers::can::Frame frame{};
+    while (platform::desktop_can::pop_transmitted(frame)) {
+        std::cout
+            << "{\"id\":" << id
+            << ",\"type\":\"can_tx\",\"can_id\":"
+            << frame.identifier
+            << ",\"data\":[";
+
+        for (std::uint8_t index = 0U; index < frame.length; ++index) {
+            if (index != 0U) {
+                std::cout << ',';
+            }
+            std::cout << static_cast<unsigned int>(frame.data[index]);
+        }
+        std::cout << "]}" << std::endl;
+    }
+}
 
 void send_done(const std::uint64_t id)
 {
@@ -451,12 +573,23 @@ int run_application()
                 virtual_timestamp_ms = request.argument;
                 run_until_stable(virtual_timestamp_ms);
                 reporter.send_state(request.id, false);
+                send_can_frames(request.id);
                 send_done(request.id);
                 break;
             case Command::advance:
                 virtual_timestamp_ms += request.argument;
                 run_until_stable(virtual_timestamp_ms);
                 reporter.send_state(request.id, false);
+                send_can_frames(request.id);
+                send_done(request.id);
+                break;
+            case Command::can_rx:
+                if (!desktop_can::inject_received(request.can_frame)) {
+                    throw ProtocolError{"CAN-драйвер отклонил входящий кадр"};
+                }
+                run_until_stable(virtual_timestamp_ms);
+                reporter.send_state(request.id, false);
+                send_can_frames(request.id);
                 send_done(request.id);
                 break;
             case Command::snapshot:

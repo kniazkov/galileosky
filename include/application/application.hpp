@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include "modules/vehicle.hpp"
+
 #include <cstdint>
 
 namespace application {
@@ -26,6 +28,7 @@ struct TickResult {
 struct StateSnapshot {
     std::uint32_t timestamp_ms;
     std::uint32_t revision;
+    modules::vehicle::Snapshot vehicle;
 };
 
 /**
