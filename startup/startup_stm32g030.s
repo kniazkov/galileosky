@@ -4,6 +4,7 @@
 
 .extern main
 .extern runtime_init
+.extern SysTick_Handler
 
 .global Reset_Handler
 .global Default_Handler
@@ -17,20 +18,20 @@ vector_table:
     .word Reset_Handler
     .word Default_Handler      /* NMI */
     .word Default_Handler      /* HardFault */
-    .word 0                    /* Reserved */
-    .word 0                    /* Reserved */
-    .word 0                    /* Reserved */
-    .word 0                    /* Reserved */
-    .word 0                    /* Reserved */
-    .word 0                    /* Reserved */
-    .word 0                    /* Reserved */
+    .word 0                    /* Зарезервировано */
+    .word 0                    /* Зарезервировано */
+    .word 0                    /* Зарезервировано */
+    .word 0                    /* Зарезервировано */
+    .word 0                    /* Зарезервировано */
+    .word 0                    /* Зарезервировано */
+    .word 0                    /* Зарезервировано */
     .word Default_Handler      /* SVCall */
-    .word 0                    /* Reserved */
-    .word 0                    /* Reserved */
+    .word 0                    /* Зарезервировано */
+    .word 0                    /* Зарезервировано */
     .word Default_Handler      /* PendSV */
-    .word Default_Handler      /* SysTick */
+    .word SysTick_Handler      /* Системный таймер */
 
-    /* STM32G030 external interrupt slots. */
+    /* Внешние прерывания STM32G030. */
     .rept 32
     .word Default_Handler
     .endr
@@ -42,7 +43,7 @@ vector_table:
 .thumb_func
 
 Reset_Handler:
-    /* Copy initialized data from Flash to SRAM. */
+    /* Копирование инициализированных данных из Flash в SRAM. */
     ldr r0, =_data_load
     ldr r1, =_data_start
     ldr r2, =_data_end
@@ -56,7 +57,7 @@ Reset_Handler:
     adds r1, r1, #4
     b 1b
 
-    /* Clear the zero-initialized section. */
+    /* Очистка секции неинициализированных данных. */
 2:
     movs r0, #0
     ldr r1, =_bss_start
@@ -69,12 +70,12 @@ Reset_Handler:
     adds r1, r1, #4
     b 3b
 
-    /* Run C++ initializers and enter the application. */
+    /* Запуск инициализаторов C++ и вход в приложение. */
 4:
     bl runtime_init
     bl main
 
-    /* main must not return. */
+    /* Защита на случай возврата из main. */
 5:
     b 5b
 

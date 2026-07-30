@@ -1,0 +1,89 @@
+{
+  "name": "Базовый протокол и виртуальное время",
+  "steps": [
+    {
+      "send": {"id": 1, "command": "snapshot"},
+      "expect": [
+        {
+          "id": 1,
+          "type": "state",
+          "full": true,
+          "state": {"timestamp_ms": 0, "revision": 0}
+        },
+        {"id": 1, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 2, "command": "tick", "timestamp_ms": 100},
+      "expect": [
+        {
+          "id": 2,
+          "type": "state",
+          "full": false,
+          "state": {"timestamp_ms": 100, "revision": 1}
+        },
+        {"id": 2, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 3, "command": "tick", "timestamp_ms": 100},
+      "expect": [
+        {"id": 3, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 4, "command": "advance", "milliseconds": 25},
+      "expect": [
+        {
+          "id": 4,
+          "type": "state",
+          "full": false,
+          "state": {"timestamp_ms": 125, "revision": 2}
+        },
+        {"id": 4, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 5, "command": "reset"},
+      "expect": [
+        {
+          "id": 5,
+          "type": "state",
+          "full": true,
+          "state": {"timestamp_ms": 0, "revision": 0}
+        },
+        {"id": 5, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 6, "command": "tick", "timestamp_ms": 4294967290},
+      "expect": [
+        {
+          "id": 6,
+          "type": "state",
+          "full": false,
+          "state": {"timestamp_ms": 4294967290, "revision": 1}
+        },
+        {"id": 6, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 7, "command": "advance", "milliseconds": 10},
+      "expect": [
+        {
+          "id": 7,
+          "type": "state",
+          "full": false,
+          "state": {"timestamp_ms": 4, "revision": 2}
+        },
+        {"id": 7, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 8, "command": "shutdown"},
+      "expect": [
+        {"id": 8, "type": "done"}
+      ]
+    }
+  ]
+}

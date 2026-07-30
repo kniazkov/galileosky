@@ -11,6 +11,7 @@ set(GALILEOSKY_PLATFORM "desktop" CACHE STRING
 set_property(CACHE GALILEOSKY_PLATFORM PROPERTY STRINGS desktop stm32g030)
 
 add_executable(${PROJECT_NAME}
+    src/application.cpp
     src/main.cpp
 )
 
@@ -20,8 +21,21 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 if(GALILEOSKY_PLATFORM STREQUAL "desktop")
     target_sources(${PROJECT_NAME} PRIVATE
-        platform/desktop/idle.cpp
+        platform/desktop/runner.cpp
     )
+
+    include(CTest)
+    find_package(Python3 QUIET COMPONENTS Interpreter)
+    if(BUILD_TESTING AND Python3_Interpreter_FOUND)
+        add_test(
+            NAME desktop_scenarios
+            COMMAND
+                ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/tools/run_scenarios.py
+                --executable $<TARGET_FILE:${PROJECT_NAME}>
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests/scenarios/basic.json
+        )
+    endif()
 
     if(MSVC)
         target_compile_options(${PROJECT_NAME} PRIVATE /W4 /WX)
@@ -42,7 +56,7 @@ elseif(GALILEOSKY_PLATFORM STREQUAL "stm32g030")
     enable_language(ASM)
 
     target_sources(${PROJECT_NAME} PRIVATE
-        platform/stm32g030/idle.cpp
+        platform/stm32g030/runner.cpp
         platform/stm32g030/runtime.cpp
         startup/startup_stm32g030.s
     )
