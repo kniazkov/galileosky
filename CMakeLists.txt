@@ -105,6 +105,8 @@ elseif(GALILEOSKY_PLATFORM STREQUAL "stm32g030")
         -T${CMAKE_CURRENT_SOURCE_DIR}/linker/stm32g030k6.ld
     )
 
+    target_link_libraries(${PROJECT_NAME} PRIVATE gcc)
+
     set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".elf")
 
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
