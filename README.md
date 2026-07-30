@@ -1,9 +1,10 @@
 # Тестовый проект для Galileosky
 
 Проект собирается как bare-metal прошивка для STM32G030K6T6 и как нативное
-desktop-приложение для Linux или Windows. Общая точка входа и интерфейс
-приложения одинаковы для всех платформ; платформенные реализации выбираются
-конфигурацией CMake.
+desktop-приложение для Linux или Windows. Прикладная логика с общей функцией
+`tick` одинакова для всех платформ; платформенные реализации выбираются
+конфигурацией CMake. Устройство проекта и протокол стенда описаны в
+[ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Целевой микроконтроллер
 
@@ -52,22 +53,27 @@ sudo apt install -y cmake ninja-build gcc-arm-none-eabi binutils-arm-none-eabi
 
 - CMake 3.21 или новее;
 - Ninja;
-- GCC с поддержкой C++17.
+- GCC с поддержкой C++17;
+- Python 3.10 или новее для запуска сценариев.
 
 Debian/Ubuntu:
 
 ```bash
 sudo apt update
-sudo apt install -y cmake ninja-build g++
+sudo apt install -y cmake ninja-build g++ python3
 ```
 
-Сборка и запуск:
+Сборка и запуск JSONL-стенда:
 
 ```bash
 ./scripts/build_and_run_linux.sh
 ```
 
-Для остановки приложения используется `Ctrl+C`.
+Проверка эталонного сценария:
+
+```bash
+ctest --test-dir build/linux-desktop --output-on-failure
+```
 
 ## Desktop-сборка на Windows
 
@@ -76,7 +82,8 @@ sudo apt install -y cmake ninja-build g++
 - MSYS2 UCRT64;
 - CMake 3.21 или новее;
 - Ninja;
-- MinGW-w64 GCC с поддержкой C++17.
+- MinGW-w64 GCC с поддержкой C++17;
+- Python 3.10 или новее для запуска сценариев.
 
 Установка в терминале MSYS2 UCRT64:
 
@@ -89,10 +96,14 @@ pacman -S --needed mingw-w64-ucrt-x86_64-gcc \
 
 Каталог `C:\msys64\ucrt64\bin` должен находиться в `PATH`.
 
-Сборка и запуск из Command Prompt или PowerShell:
+Сборка и запуск JSONL-стенда из Command Prompt или PowerShell:
 
 ```cmd
 scripts\build_and_run_windows.cmd
 ```
 
-Для остановки приложения используется `Ctrl+C`.
+Проверка эталонного сценария:
+
+```cmd
+ctest --test-dir build\windows-desktop --output-on-failure
+```
