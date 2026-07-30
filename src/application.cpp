@@ -11,6 +11,9 @@
 
 namespace {
 
+/**
+ * @brief Хранит всё текущее состояние минимального прикладного ядра.
+ */
 struct ApplicationState {
     std::uint32_t timestamp_ms;
     std::uint32_t revision;

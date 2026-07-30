@@ -13,17 +13,36 @@
 
 namespace application {
 
+/**
+ * @brief Сообщает платформенному циклу, осталась ли немедленная работа.
+ */
 struct TickResult {
     bool work_pending;
 };
 
+/**
+ * @brief Содержит наблюдаемую часть состояния приложения.
+ */
 struct StateSnapshot {
     std::uint32_t timestamp_ms;
     std::uint32_t revision;
 };
 
+/**
+ * @brief Возвращает приложение в исходное состояние.
+ */
 void reset();
+
+/**
+ * @brief Выполняет один детерминированный шаг прикладной логики.
+ * @param timestamp_ms Текущее монотонное время в миллисекундах.
+ * @return Признак необходимости повторного шага без продвижения времени.
+ */
 TickResult tick(std::uint32_t timestamp_ms);
+
+/**
+ * @brief Возвращает состояние, доступное платформенному адаптеру.
+ */
 StateSnapshot snapshot();
 
 }  // пространство имён application

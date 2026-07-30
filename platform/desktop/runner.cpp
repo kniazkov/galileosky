@@ -24,6 +24,9 @@ namespace {
 
 constexpr std::size_t maximum_ticks_per_command = 1'024U;
 
+/**
+ * @brief Перечисляет команды, доступные управляющему сценарию.
+ */
 enum class Command {
     tick,
     advance,
@@ -32,24 +35,39 @@ enum class Command {
     shutdown
 };
 
+/**
+ * @brief Содержит проверенную и готовую к выполнению команду.
+ */
 struct Request {
     std::uint64_t id;
     Command command;
     std::uint32_t argument;
 };
 
+/**
+ * @brief Обозначает ошибку входного протокола или выполнения команды.
+ */
 class ProtocolError final : public std::runtime_error {
 public:
     using std::runtime_error::runtime_error;
 };
 
+/**
+ * @brief Разбирает плоский JSON-объект без внешней библиотеки.
+ */
 class JsonReader {
 public:
+    /**
+     * @brief Создаёт читатель для одной входной строки.
+     */
     explicit JsonReader(const std::string_view input)
         : input_{input}
     {
     }
 
+    /**
+     * @brief Требует указанный символ в текущей позиции.
+     */
     void expect(const char expected)
     {
         skip_whitespace();
@@ -59,6 +77,10 @@ public:
         ++position_;
     }
 
+    /**
+     * @brief Считывает указанный символ, если он присутствует.
+     * @return true, если символ был считан.
+     */
     bool consume(const char value)
     {
         skip_whitespace();
@@ -69,6 +91,9 @@ public:
         return false;
     }
 
+    /**
+     * @brief Считывает строковое значение JSON.
+     */
     std::string read_string()
     {
         skip_whitespace();
@@ -125,6 +150,9 @@ public:
         throw ProtocolError{"незавершённая строка JSON"};
     }
 
+    /**
+     * @brief Считывает беззнаковое целое значение JSON.
+     */
     std::uint64_t read_unsigned()
     {
         skip_whitespace();
@@ -152,6 +180,9 @@ public:
         return result;
     }
 
+    /**
+     * @brief Проверяет отсутствие данных после разобранного объекта.
+     */
     void finish()
     {
         skip_whitespace();
@@ -161,6 +192,9 @@ public:
     }
 
 private:
+    /**
+     * @brief Пропускает разрешённые JSON пробельные символы.
+     */
     void skip_whitespace()
     {
         while (position_ != input_.size()
@@ -333,8 +367,14 @@ void run_until_stable(const std::uint32_t timestamp_ms)
     throw ProtocolError{"tick не достиг устойчивого состояния"};
 }
 
+/**
+ * @brief Выдаёт только новые ревизии состояния или полный снимок.
+ */
 class Reporter {
 public:
+    /**
+     * @brief Отправляет состояние, если оно изменилось или запрошено принудительно.
+     */
     void send_state(const std::uint64_t id, const bool force_full)
     {
         const application::StateSnapshot state = application::snapshot();
@@ -354,6 +394,9 @@ public:
         reported_ = true;
     }
 
+    /**
+     * @brief Заставляет следующий отчёт считаться первым.
+     */
     void invalidate()
     {
         reported_ = false;

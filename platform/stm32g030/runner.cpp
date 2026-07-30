@@ -43,6 +43,9 @@ void configure_systick()
 
 }  // безымянное пространство имён
 
+/**
+ * @brief Увеличивает системное время по прерыванию SysTick.
+ */
 extern "C" void SysTick_Handler()
 {
     ++milliseconds;
