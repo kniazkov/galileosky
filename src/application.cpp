@@ -9,6 +9,9 @@
 
 #include "application/application.hpp"
 
+#include "drivers/can.hpp"
+#include "modules/vehicle.hpp"
+
 namespace {
 
 /**
@@ -29,6 +32,8 @@ namespace application {
 void reset()
 {
     state = {};
+    drivers::can::reset();
+    modules::vehicle::reset();
 }
 
 TickResult tick(const std::uint32_t timestamp_ms)
@@ -39,12 +44,16 @@ TickResult tick(const std::uint32_t timestamp_ms)
         state.initialized = true;
     }
 
+    modules::vehicle::tick(timestamp_ms);
     return TickResult{false};
 }
 
 StateSnapshot snapshot()
 {
-    return StateSnapshot{state.timestamp_ms, state.revision};
+    return StateSnapshot{
+        state.timestamp_ms,
+        state.revision,
+        modules::vehicle::snapshot()};
 }
 
 }  // пространство имён application

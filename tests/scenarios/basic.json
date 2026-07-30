@@ -8,7 +8,19 @@
           "id": 1,
           "type": "state",
           "full": true,
-          "state": {"timestamp_ms": 0, "revision": 0}
+          "state": {
+            "timestamp_ms": 0,
+            "revision": 0,
+            "vehicle": {
+              "engine_speed_rpm": 0,
+              "vehicle_speed_kmh": 0,
+              "coolant_temperature_c": 0,
+              "fuel_level_percent": 0,
+              "check_engine": false,
+              "valid_mask": 0,
+              "revision": 0
+            }
+          }
         },
         {"id": 1, "type": "done"}
       ]
@@ -50,7 +62,19 @@
           "id": 5,
           "type": "state",
           "full": true,
-          "state": {"timestamp_ms": 0, "revision": 0}
+          "state": {
+            "timestamp_ms": 0,
+            "revision": 0,
+            "vehicle": {
+              "engine_speed_rpm": 0,
+              "vehicle_speed_kmh": 0,
+              "coolant_temperature_c": 0,
+              "fuel_level_percent": 0,
+              "check_engine": false,
+              "valid_mask": 0,
+              "revision": 0
+            }
+          }
         },
         {"id": 5, "type": "done"}
       ]

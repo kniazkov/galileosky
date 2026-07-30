@@ -1,0 +1,222 @@
+{
+  "name": "CAN и параметры автомобиля OBD-II",
+  "steps": [
+    {
+      "send": {"id": 1, "command": "tick", "timestamp_ms": 0},
+      "expect": [
+        {
+          "id": 1,
+          "type": "state",
+          "full": false,
+          "state": {"timestamp_ms": 0, "revision": 1}
+        },
+        {"id": 1, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 2, "command": "advance", "milliseconds": 1000},
+      "expect": [
+        {
+          "id": 2,
+          "type": "state",
+          "full": false,
+          "state": {"timestamp_ms": 1000, "revision": 2}
+        },
+        {
+          "id": 2,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 12, 0, 0, 0, 0, 0]
+        },
+        {
+          "id": 2,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 13, 0, 0, 0, 0, 0]
+        },
+        {
+          "id": 2,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 5, 0, 0, 0, 0, 0]
+        },
+        {
+          "id": 2,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 47, 0, 0, 0, 0, 0]
+        },
+        {
+          "id": 2,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 1, 0, 0, 0, 0, 0]
+        },
+        {"id": 2, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 3,
+        "command": "can_rx",
+        "can_id": 2024,
+        "data": [4, 65, 12, 26, 248, 0, 0, 0]
+      },
+      "expect": [
+        {
+          "id": 3,
+          "type": "state",
+          "full": false,
+          "state": {
+            "vehicle": {
+              "engine_speed_rpm": 1726,
+              "vehicle_speed_kmh": 0,
+              "coolant_temperature_c": 0,
+              "fuel_level_percent": 0,
+              "check_engine": false,
+              "valid_mask": 1,
+              "revision": 1
+            }
+          }
+        },
+        {"id": 3, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 4,
+        "command": "can_rx",
+        "can_id": 2024,
+        "data": [3, 65, 13, 88, 0, 0, 0, 0]
+      },
+      "expect": [
+        {
+          "id": 4,
+          "type": "state",
+          "full": false,
+          "state": {
+            "vehicle": {
+              "engine_speed_rpm": 1726,
+              "vehicle_speed_kmh": 88,
+              "coolant_temperature_c": 0,
+              "fuel_level_percent": 0,
+              "check_engine": false,
+              "valid_mask": 3,
+              "revision": 2
+            }
+          }
+        },
+        {"id": 4, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 5,
+        "command": "can_rx",
+        "can_id": 2024,
+        "data": [3, 65, 5, 130, 0, 0, 0, 0]
+      },
+      "expect": [
+        {
+          "id": 5,
+          "type": "state",
+          "full": false,
+          "state": {
+            "vehicle": {
+              "engine_speed_rpm": 1726,
+              "vehicle_speed_kmh": 88,
+              "coolant_temperature_c": 90,
+              "fuel_level_percent": 0,
+              "check_engine": false,
+              "valid_mask": 7,
+              "revision": 3
+            }
+          }
+        },
+        {"id": 5, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 6,
+        "command": "can_rx",
+        "can_id": 2024,
+        "data": [3, 65, 47, 128, 0, 0, 0, 0]
+      },
+      "expect": [
+        {
+          "id": 6,
+          "type": "state",
+          "full": false,
+          "state": {
+            "vehicle": {
+              "engine_speed_rpm": 1726,
+              "vehicle_speed_kmh": 88,
+              "coolant_temperature_c": 90,
+              "fuel_level_percent": 50,
+              "check_engine": false,
+              "valid_mask": 15,
+              "revision": 4
+            }
+          }
+        },
+        {"id": 6, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 7,
+        "command": "can_rx",
+        "can_id": 2024,
+        "data": [6, 65, 1, 130, 0, 0, 0, 0]
+      },
+      "expect": [
+        {
+          "id": 7,
+          "type": "state",
+          "full": false,
+          "state": {
+            "vehicle": {
+              "engine_speed_rpm": 1726,
+              "vehicle_speed_kmh": 88,
+              "coolant_temperature_c": 90,
+              "fuel_level_percent": 50,
+              "check_engine": true,
+              "valid_mask": 31,
+              "revision": 5
+            }
+          }
+        },
+        {"id": 7, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 8,
+        "command": "can_rx",
+        "can_id": 2024,
+        "data": [4, 65, 12, 26, 248, 0, 0, 0]
+      },
+      "expect": [
+        {"id": 8, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 9,
+        "command": "can_rx",
+        "can_id": 291,
+        "data": [3, 65, 13, 120, 0, 0, 0, 0]
+      },
+      "expect": [
+        {"id": 9, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 10, "command": "shutdown"},
+      "expect": [
+        {"id": 10, "type": "done"}
+      ]
+    }
+  ]
+}

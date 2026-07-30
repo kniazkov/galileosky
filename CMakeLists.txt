@@ -12,7 +12,10 @@ set_property(CACHE GALILEOSKY_PLATFORM PROPERTY STRINGS desktop stm32g030)
 
 add_executable(${PROJECT_NAME}
     src/application.cpp
+    src/can.cpp
     src/main.cpp
+    src/obd2.cpp
+    src/vehicle.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -21,6 +24,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 if(GALILEOSKY_PLATFORM STREQUAL "desktop")
     target_sources(${PROJECT_NAME} PRIVATE
+        platform/desktop/can_driver.cpp
         platform/desktop/runner.cpp
     )
 
@@ -63,6 +67,7 @@ elseif(GALILEOSKY_PLATFORM STREQUAL "stm32g030")
     enable_language(ASM)
 
     target_sources(${PROJECT_NAME} PRIVATE
+        platform/stm32g030/can_driver.cpp
         platform/stm32g030/runner.cpp
         platform/stm32g030/runtime.cpp
         startup/startup_stm32g030.s
