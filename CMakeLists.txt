@@ -86,6 +86,9 @@ elseif(GALILEOSKY_PLATFORM STREQUAL "stm32g030")
         $<$<COMPILE_LANGUAGE:CXX>:-fno-use-cxa-atexit>
         $<$<COMPILE_LANGUAGE:CXX>:-fno-unwind-tables>
         $<$<COMPILE_LANGUAGE:CXX>:-fno-asynchronous-unwind-tables>
+        # Не используем Thumb-1 helper таблиц переходов из libgcc: в некоторых
+        # toolchain он не содержит отметку о неисполняемом стеке.
+        $<$<COMPILE_LANGUAGE:CXX>:-fno-jump-tables>
         $<$<COMPILE_LANGUAGE:CXX>:-fstack-usage>
         $<$<COMPILE_LANGUAGE:CXX>:-Wa,--noexecstack>
         $<$<COMPILE_LANGUAGE:CXX>:-Wall>
