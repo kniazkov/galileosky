@@ -17,6 +17,15 @@ class ScenarioFailure(RuntimeError):
     """Описывает несовпадение протокола с эталонным сценарием."""
 
 
+def configure_console_encoding() -> None:
+    """Включает UTF-8 для русской диагностики на Windows и Linux."""
+
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8")
+
+
 def read_stdout(stream: TextIO, lines: queue.Queue[str | None]) -> None:
     """Передаёт строки stdout в очередь, чтобы основной поток мог ждать с тайм-аутом."""
 
@@ -174,6 +183,7 @@ def parse_arguments() -> argparse.Namespace:
 def main() -> int:
     """Запускает все переданные сценарии и возвращает код результата."""
 
+    configure_console_encoding()
     arguments = parse_arguments()
     try:
         for scenario in arguments.scenarios:

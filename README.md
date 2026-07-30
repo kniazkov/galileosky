@@ -1,5 +1,7 @@
 # Тестовый проект для Galileosky
 
+[![Проверка сборки](https://github.com/kniazkov/galileosky/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/kniazkov/galileosky/actions/workflows/ci.yml)
+
 Проект собирается как bare-metal прошивка для STM32G030K6T6 и как нативное
 desktop-приложение для Linux или Windows. Прикладная логика с общей функцией
 `tick` одинакова для всех платформ; платформенные реализации выбираются
@@ -69,7 +71,7 @@ sudo apt install -y cmake ninja-build g++ python3
 ./scripts/build_and_run_linux.sh
 ```
 
-Проверка эталонного сценария:
+Проверка всех сценариев:
 
 ```bash
 ctest --test-dir build/linux-desktop --output-on-failure
@@ -102,7 +104,7 @@ pacman -S --needed mingw-w64-ucrt-x86_64-gcc \
 scripts\build_and_run_windows.cmd
 ```
 
-Проверка эталонного сценария:
+Проверка всех сценариев:
 
 ```cmd
 ctest --test-dir build\windows-desktop --output-on-failure

@@ -25,15 +25,22 @@ if(GALILEOSKY_PLATFORM STREQUAL "desktop")
     )
 
     include(CTest)
-    find_package(Python3 QUIET COMPONENTS Interpreter)
-    if(BUILD_TESTING AND Python3_Interpreter_FOUND)
+    if(BUILD_TESTING)
+        find_package(Python3 REQUIRED COMPONENTS Interpreter)
+        file(GLOB GALILEOSKY_SCENARIOS CONFIGURE_DEPENDS
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/scenarios/*.json"
+        )
+        if(NOT GALILEOSKY_SCENARIOS)
+            message(FATAL_ERROR "Не найдены JSON-сценарии")
+        endif()
+
         add_test(
             NAME desktop_scenarios
             COMMAND
                 ${Python3_EXECUTABLE}
                 ${CMAKE_CURRENT_SOURCE_DIR}/tools/run_scenarios.py
                 --executable $<TARGET_FILE:${PROJECT_NAME}>
-                ${CMAKE_CURRENT_SOURCE_DIR}/tests/scenarios/basic.json
+                ${GALILEOSKY_SCENARIOS}
         )
     endif()
 

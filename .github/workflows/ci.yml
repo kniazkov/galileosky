@@ -1,0 +1,117 @@
+name: Проверка сборки
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  desktop-linux:
+    name: Desktop Linux
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v5
+
+      - name: Установить Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Настроить сборку
+        run: >
+          cmake -S . -B build/ci-linux
+          -DCMAKE_BUILD_TYPE=Release
+          -DGALILEOSKY_PLATFORM=desktop
+          -DBUILD_TESTING=ON
+
+      - name: Собрать приложение
+        run: cmake --build build/ci-linux --parallel
+
+      - name: Запустить все сценарии
+        run: ctest --test-dir build/ci-linux --output-on-failure
+
+  desktop-windows:
+    name: Desktop Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v5
+
+      - name: Установить Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Настроить сборку
+        run: >
+          cmake -S . -B build/ci-windows -A x64
+          -DGALILEOSKY_PLATFORM=desktop
+          -DBUILD_TESTING=ON
+
+      - name: Собрать приложение
+        run: cmake --build build/ci-windows --config Release --parallel
+
+      - name: Запустить все сценарии
+        run: >
+          ctest --test-dir build/ci-windows
+          --build-config Release
+          --output-on-failure
+
+  target:
+    name: STM32G030
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v5
+
+      - name: Установить ARM GNU Toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-arm-none-eabi \
+            binutils-arm-none-eabi \
+            ninja-build
+
+      - name: Собрать прошивку
+        run: ./scripts/build_target.sh
+
+  quality-gate:
+    name: Проверка проекта
+    if: always()
+    needs:
+      - desktop-linux
+      - desktop-windows
+      - target
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Проверить результаты
+        env:
+          LINUX_RESULT: ${{ needs.desktop-linux.result }}
+          WINDOWS_RESULT: ${{ needs.desktop-windows.result }}
+          TARGET_RESULT: ${{ needs.target.result }}
+        run: |
+          if [[ "${LINUX_RESULT}" == "success" \
+             && "${WINDOWS_RESULT}" == "success" \
+             && "${TARGET_RESULT}" == "success" ]]; then
+            exit 0
+          fi
+
+          echo "Одна или несколько проверок завершились неуспешно."
+          exit 1
