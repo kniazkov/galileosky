@@ -24,7 +24,7 @@ void run_initializers(Initializer* begin, Initializer* end)
     }
 }
 
-}  // namespace
+}  // безымянное пространство имён
 
 extern "C" void runtime_init()
 {
