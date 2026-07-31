@@ -124,6 +124,9 @@ elseif(GALILEOSKY_PLATFORM STREQUAL "stm32g030")
         -mcpu=cortex-m0plus
         -mthumb
         -nostdlib
+        # Часть служебных объектов libgcc не содержит .note.GNU-stack.
+        # Явно запрещаем исполняемый стек, не отключая строгие предупреждения.
+        -Wl,-z,noexecstack
         -Wl,--gc-sections
         -Wl,--fatal-warnings
         -Wl,--print-memory-usage
