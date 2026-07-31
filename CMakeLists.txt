@@ -64,6 +64,14 @@ if(GALILEOSKY_PLATFORM STREQUAL "desktop")
                 --executable $<TARGET_FILE:${PROJECT_NAME}>
                 ${GALILEOSKY_SCENARIOS}
         )
+
+        add_test(
+            NAME desktop_demo
+            COMMAND
+                ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/tools/demo_end_to_end.py
+                --executable $<TARGET_FILE:${PROJECT_NAME}>
+        )
     endif()
 
     if(MSVC)
