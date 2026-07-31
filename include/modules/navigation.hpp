@@ -29,9 +29,9 @@ struct Snapshot {
 void reset();
 
 /**
- * @brief Опрашивает приёмник при наступлении 100-миллисекундного интервала.
+ * @brief Опрашивает включённый приёмник или сбрасывает недоступную фиксацию.
  */
-void tick(std::uint32_t timestamp_ms);
+void tick(std::uint32_t timestamp_ms, bool receiver_enabled);
 
 /**
  * @brief Возвращает текущее состояние навигации.

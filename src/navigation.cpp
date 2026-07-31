@@ -59,8 +59,21 @@ void reset()
     state = {};
 }
 
-void tick(const std::uint32_t timestamp_ms)
+void tick(
+    const std::uint32_t timestamp_ms,
+    const bool receiver_enabled)
 {
+    if (!receiver_enabled) {
+        state.polling_started = false;
+        if (state.snapshot.fix_valid) {
+            const std::uint32_t revision =
+                state.snapshot.revision + 1U;
+            state.snapshot = {};
+            state.snapshot.revision = revision;
+        }
+        return;
+    }
+
     if (state.polling_started
         && timestamp_ms - state.last_poll_timestamp_ms < polling_interval_ms) {
         return;
