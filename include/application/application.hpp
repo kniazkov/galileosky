@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include "modules/geofences.hpp"
+#include "modules/navigation.hpp"
 #include "modules/server_transmission.hpp"
 #include "modules/sensors.hpp"
 #include "modules/vehicle.hpp"
@@ -32,6 +34,8 @@ struct StateSnapshot {
     std::uint32_t revision;
     modules::vehicle::Snapshot vehicle;
     modules::sensors::Snapshot sensors;
+    modules::navigation::Snapshot navigation;
+    modules::geofences::Snapshot geofences;
     modules::server_transmission::Snapshot server_transmission;
 };
 

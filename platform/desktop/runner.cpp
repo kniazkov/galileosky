@@ -10,10 +10,12 @@
 
 #include "application/application.hpp"
 #include "drivers/can.hpp"
+#include "drivers/gnss.hpp"
 #include "drivers/server_transport.hpp"
 #include "drivers/sensors.hpp"
 #include "modules/server_transmission.hpp"
 #include "platform/desktop/can_adapter.hpp"
+#include "platform/desktop/gnss_adapter.hpp"
 #include "platform/desktop/server_transport_adapter.hpp"
 #include "platform/desktop/sensors_adapter.hpp"
 #include "platform/runtime.hpp"
@@ -41,6 +43,7 @@ enum class Command {
     can_rx,
     adc_set,
     digital_set,
+    gnss_set,
     server_enqueue,
     server_online,
     snapshot,
@@ -61,6 +64,7 @@ struct Request {
     std::uint8_t sensor_channel;
     std::uint16_t sensor_value;
     bool sensor_active;
+    drivers::gnss::Fix gnss_fix;
 };
 
 /**
@@ -200,6 +204,39 @@ public:
     }
 
     /**
+     * @brief Считывает целое значение, помещающееся в 32 знаковых бита.
+     */
+    std::int32_t read_signed_32()
+    {
+        const bool negative = consume('-');
+        if (negative
+            && (position_ == input_.size()
+                || !std::isdigit(
+                    static_cast<unsigned char>(input_[position_])))) {
+            throw ProtocolError{"после минуса ожидалась цифра"};
+        }
+        const std::uint64_t magnitude = read_unsigned();
+        const std::uint64_t negative_limit =
+            static_cast<std::uint64_t>(
+                std::numeric_limits<std::int32_t>::max()) + 1U;
+
+        if ((!negative
+                && magnitude
+                    > static_cast<std::uint64_t>(
+                        std::numeric_limits<std::int32_t>::max()))
+            || (negative && magnitude > negative_limit)) {
+            throw ProtocolError{"число не помещается в 32 знаковых бита"};
+        }
+
+        if (negative && magnitude == negative_limit) {
+            return std::numeric_limits<std::int32_t>::min();
+        }
+
+        const std::int32_t value = static_cast<std::int32_t>(magnitude);
+        return negative ? -value : value;
+    }
+
+    /**
      * @brief Считывает логическое значение JSON.
      */
     bool read_boolean()
@@ -301,6 +338,9 @@ Command parse_command(const std::string& value)
     if (value == "digital_set") {
         return Command::digital_set;
     }
+    if (value == "gnss_set") {
+        return Command::gnss_set;
+    }
     if (value == "server_enqueue") {
         return Command::server_enqueue;
     }
@@ -333,6 +373,7 @@ Request parse_request(const std::string& line)
     std::uint8_t sensor_channel = 0U;
     std::uint16_t sensor_value = 0U;
     bool sensor_active = false;
+    drivers::gnss::Fix gnss_fix{};
     std::string command_text;
     bool has_id = false;
     bool has_command = false;
@@ -346,6 +387,10 @@ Request parse_request(const std::string& line)
     bool has_sensor_channel = false;
     bool has_sensor_value = false;
     bool has_sensor_active = false;
+    bool has_latitude = false;
+    bool has_longitude = false;
+    bool has_ground_speed = false;
+    bool has_fix_valid = false;
 
     if (!reader.consume('}')) {
         for (;;) {
@@ -439,6 +484,39 @@ Request parse_request(const std::string& line)
                 }
                 sensor_active = reader.read_boolean();
                 has_sensor_active = true;
+            } else if (key == "latitude_e7") {
+                if (has_latitude) {
+                    throw ProtocolError{
+                        "поле latitude_e7 указано несколько раз"};
+                }
+                gnss_fix.latitude_e7 = reader.read_signed_32();
+                has_latitude = true;
+            } else if (key == "longitude_e7") {
+                if (has_longitude) {
+                    throw ProtocolError{
+                        "поле longitude_e7 указано несколько раз"};
+                }
+                gnss_fix.longitude_e7 = reader.read_signed_32();
+                has_longitude = true;
+            } else if (key == "ground_speed_centi_kph") {
+                if (has_ground_speed) {
+                    throw ProtocolError{
+                        "поле ground_speed_centi_kph указано несколько раз"};
+                }
+                const std::uint64_t speed = reader.read_unsigned();
+                if (speed > std::numeric_limits<std::uint16_t>::max()) {
+                    throw ProtocolError{
+                        "ground_speed_centi_kph не помещается в 16 бит"};
+                }
+                gnss_fix.ground_speed_centi_kph =
+                    static_cast<std::uint16_t>(speed);
+                has_ground_speed = true;
+            } else if (key == "valid") {
+                if (has_fix_valid) {
+                    throw ProtocolError{"поле valid указано несколько раз"};
+                }
+                gnss_fix.valid = reader.read_boolean();
+                has_fix_valid = true;
             } else {
                 throw ProtocolError{"неизвестное поле команды"};
             }
@@ -459,33 +537,38 @@ Request parse_request(const std::string& line)
     const bool has_server_message = has_message_id || has_payload;
     const bool has_sensor_fields =
         has_sensor_channel || has_sensor_value || has_sensor_active;
+    const bool has_gnss_fields =
+        has_latitude || has_longitude || has_ground_speed || has_fix_valid;
     switch (command) {
     case Command::tick:
         if (!has_timestamp || has_milliseconds || has_can_id || has_can_data
-            || has_server_message || has_server_online || has_sensor_fields) {
+            || has_server_message || has_server_online || has_sensor_fields
+            || has_gnss_fields) {
             throw ProtocolError{"команде tick требуется только timestamp_ms"};
         }
         return Request{
-            id, command, timestamp_ms, {}, {}, false, 0U, 0U, false};
+            id, command, timestamp_ms, {}, {}, false, 0U, 0U, false, {}};
     case Command::advance:
         if (!has_milliseconds || has_timestamp || has_can_id || has_can_data
-            || has_server_message || has_server_online || has_sensor_fields) {
+            || has_server_message || has_server_online || has_sensor_fields
+            || has_gnss_fields) {
             throw ProtocolError{"команде advance требуется только milliseconds"};
         }
         return Request{
-            id, command, milliseconds, {}, {}, false, 0U, 0U, false};
+            id, command, milliseconds, {}, {}, false, 0U, 0U, false, {}};
     case Command::can_rx:
         if (has_timestamp || has_milliseconds || !has_can_id || !has_can_data
-            || has_server_message || has_server_online || has_sensor_fields) {
+            || has_server_message || has_server_online || has_sensor_fields
+            || has_gnss_fields) {
             throw ProtocolError{"команде can_rx требуются can_id и data"};
         }
         return Request{
-            id, command, 0U, can_frame, {}, false, 0U, 0U, false};
+            id, command, 0U, can_frame, {}, false, 0U, 0U, false, {}};
     case Command::adc_set:
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
             || has_server_message || has_server_online
             || !has_sensor_channel || !has_sensor_value || has_sensor_active
-            || sensor_channel > 1U) {
+            || sensor_channel > 1U || has_gnss_fields) {
             throw ProtocolError{
                 "команде adc_set требуются channel 0..1 и adc_value"};
         }
@@ -498,12 +581,13 @@ Request parse_request(const std::string& line)
             false,
             sensor_channel,
             sensor_value,
-            false};
+            false,
+            {}};
     case Command::digital_set:
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
             || has_server_message || has_server_online
             || !has_sensor_channel || has_sensor_value || !has_sensor_active
-            || sensor_channel > 2U) {
+            || sensor_channel > 2U || has_gnss_fields) {
             throw ProtocolError{
                 "команде digital_set требуются channel 0..2 и active"};
         }
@@ -516,31 +600,58 @@ Request parse_request(const std::string& line)
             false,
             sensor_channel,
             0U,
-            sensor_active};
+            sensor_active,
+            {}};
+    case Command::gnss_set:
+        if (has_timestamp || has_milliseconds || has_can_id || has_can_data
+            || has_server_message || has_server_online || has_sensor_fields
+            || !has_fix_valid
+            || (gnss_fix.valid
+                && (!has_latitude || !has_longitude || !has_ground_speed))
+            || (!gnss_fix.valid
+                && (has_latitude || has_longitude || has_ground_speed))
+            || !drivers::gnss::is_valid(gnss_fix)) {
+            throw ProtocolError{
+                "gnss_set требует valid и, для valid=true, координаты и скорость"};
+        }
+        return Request{
+            id,
+            command,
+            0U,
+            {},
+            {},
+            false,
+            0U,
+            0U,
+            false,
+            gnss_fix};
     case Command::server_enqueue:
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
             || !has_message_id || !has_payload || has_server_online
-            || has_sensor_fields) {
+            || has_sensor_fields || has_gnss_fields) {
             throw ProtocolError{
                 "команде server_enqueue требуются message_id и payload"};
         }
         return Request{
-            id, command, 0U, {}, server_message, false, 0U, 0U, false};
+            id, command, 0U, {}, server_message, false, 0U, 0U, false, {}};
     case Command::server_online:
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
-            || has_server_message || !has_server_online || has_sensor_fields) {
+            || has_server_message || !has_server_online || has_sensor_fields
+            || has_gnss_fields) {
             throw ProtocolError{"команде server_online требуется поле online"};
         }
         return Request{
-            id, command, 0U, {}, {}, server_online, 0U, 0U, false};
+            id, command, 0U, {}, {}, server_online, 0U, 0U, false, {}};
     case Command::snapshot:
     case Command::reset:
     case Command::shutdown:
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
-            || has_server_message || has_server_online || has_sensor_fields) {
+            || has_server_message || has_server_online || has_sensor_fields
+            || has_gnss_fields) {
             throw ProtocolError{"команда не принимает дополнительные поля"};
         }
-        return Request{id, command, 0U, {}, {}, false, 0U, 0U, false};
+        return Request{
+            id, command, 0U, {}, {}, false, 0U, 0U, false, {}};
     }
 
     throw ProtocolError{"невозможное значение команды"};
@@ -614,11 +725,17 @@ public:
             state.server_transmission.revision != last_server_revision_;
         const bool sensors_changed =
             state.sensors.revision != last_sensors_revision_;
+        const bool navigation_changed =
+            state.navigation.revision != last_navigation_revision_;
+        const bool geofences_changed =
+            state.geofences.revision != last_geofences_revision_;
         if (!force_full
             && !application_changed
             && !vehicle_changed
             && !server_changed
-            && !sensors_changed) {
+            && !sensors_changed
+            && !navigation_changed
+            && !geofences_changed) {
             return;
         }
 
@@ -682,6 +799,40 @@ public:
             field_written = true;
         }
 
+        if (force_full || navigation_changed) {
+            if (field_written) {
+                std::cout << ',';
+            }
+            std::cout
+                << "\"navigation\":{"
+                << "\"latitude_e7\":"
+                << state.navigation.latitude_e7
+                << ",\"longitude_e7\":"
+                << state.navigation.longitude_e7
+                << ",\"ground_speed_centi_kph\":"
+                << state.navigation.ground_speed_centi_kph
+                << ",\"fix_valid\":"
+                << (state.navigation.fix_valid ? "true" : "false")
+                << ",\"revision\":" << state.navigation.revision
+                << '}';
+            field_written = true;
+        }
+
+        if (force_full || geofences_changed) {
+            if (field_written) {
+                std::cout << ',';
+            }
+            std::cout
+                << "\"geofences\":{"
+                << "\"inside_mask\":"
+                << static_cast<unsigned int>(state.geofences.inside_mask)
+                << ",\"position_valid\":"
+                << (state.geofences.position_valid ? "true" : "false")
+                << ",\"revision\":" << state.geofences.revision
+                << '}';
+            field_written = true;
+        }
+
         if (force_full || server_changed) {
             if (field_written) {
                 std::cout << ',';
@@ -706,6 +857,8 @@ public:
         last_vehicle_revision_ = state.vehicle.revision;
         last_server_revision_ = state.server_transmission.revision;
         last_sensors_revision_ = state.sensors.revision;
+        last_navigation_revision_ = state.navigation.revision;
+        last_geofences_revision_ = state.geofences.revision;
         reported_ = true;
     }
 
@@ -718,6 +871,8 @@ public:
         last_vehicle_revision_ = 0U;
         last_server_revision_ = 0U;
         last_sensors_revision_ = 0U;
+        last_navigation_revision_ = 0U;
+        last_geofences_revision_ = 0U;
     }
 
 private:
@@ -725,6 +880,8 @@ private:
     std::uint32_t last_vehicle_revision_{};
     std::uint32_t last_server_revision_{};
     std::uint32_t last_sensors_revision_{};
+    std::uint32_t last_navigation_revision_{};
+    std::uint32_t last_geofences_revision_{};
     bool reported_{};
 };
 
@@ -852,6 +1009,17 @@ int run_application()
                     static_cast<drivers::sensors::DigitalInput>(
                         request.sensor_channel),
                     request.sensor_active);
+                run_until_stable(virtual_timestamp_ms);
+                reporter.send_state(request.id, false);
+                send_can_frames(request.id);
+                send_server_messages(request.id);
+                send_done(request.id);
+                break;
+            case Command::gnss_set:
+                if (!desktop_gnss::set_fix(request.gnss_fix)) {
+                    throw ProtocolError{
+                        "GPS/ГЛОНАСС-драйвер отклонил фиксацию"};
+                }
                 run_until_stable(virtual_timestamp_ms);
                 reporter.send_state(request.id, false);
                 send_can_frames(request.id);
