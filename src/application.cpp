@@ -11,8 +11,11 @@
 
 #include "drivers/can.hpp"
 #include "drivers/gnss.hpp"
+#include "drivers/service_port.hpp"
 #include "drivers/server_transport.hpp"
 #include "drivers/sensors.hpp"
+#include "modules/configuration.hpp"
+#include "modules/diagnostics.hpp"
 #include "modules/event_messages.hpp"
 #include "modules/geofences.hpp"
 #include "modules/navigation.hpp"
@@ -43,8 +46,11 @@ void reset()
     state = {};
     drivers::can::reset();
     drivers::gnss::reset();
+    drivers::service_port::reset();
     drivers::server_transport::reset();
     drivers::sensors::reset();
+    modules::configuration::reset();
+    modules::diagnostics::reset();
     modules::event_messages::reset();
     modules::geofences::reset();
     modules::navigation::reset();
@@ -62,14 +68,24 @@ TickResult tick(const std::uint32_t timestamp_ms)
         state.initialized = true;
     }
 
+    const modules::configuration::Snapshot configuration =
+        modules::configuration::snapshot();
+    modules::diagnostics::tick(
+        timestamp_ms,
+        configuration.watchdog_timeout_ms);
     modules::vehicle::tick(timestamp_ms);
     modules::navigation::tick(timestamp_ms);
     modules::geofences::tick(
         timestamp_ms,
-        modules::navigation::snapshot());
+        modules::navigation::snapshot(),
+        configuration.geofences_enabled);
     modules::sensors::tick(timestamp_ms);
     modules::sensor_events::tick(timestamp_ms, modules::sensors::snapshot());
-    return TickResult{modules::server_transmission::tick()};
+    const bool service_pending =
+        modules::configuration::tick(timestamp_ms);
+    const bool transmission_pending =
+        modules::server_transmission::tick();
+    return TickResult{service_pending || transmission_pending};
 }
 
 StateSnapshot snapshot()

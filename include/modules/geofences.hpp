@@ -35,7 +35,8 @@ void reset();
  */
 void tick(
     std::uint32_t timestamp_ms,
-    const modules::navigation::Snapshot& navigation);
+    const modules::navigation::Snapshot& navigation,
+    bool enabled);
 
 /**
  * @brief Возвращает текущую маску геозон.

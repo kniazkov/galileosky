@@ -1,0 +1,193 @@
+{
+  "name": "Включение и отключение геозон через конфигурацию",
+  "steps": [
+    {
+      "send": {"id": 1, "command": "tick", "timestamp_ms": 0},
+      "expect": [
+        {
+          "id": 1,
+          "type": "state",
+          "full": false,
+          "state": {"timestamp_ms": 0, "revision": 1}
+        },
+        {"id": 1, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 2,
+        "command": "service_rx",
+        "service_data": [2, 0, 232, 3, 0, 0]
+      },
+      "expect": [
+        {"id": 2, "type": "service_tx", "data": [130, 0]},
+        {"id": 2, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 3,
+        "command": "gnss_set",
+        "valid": true,
+        "latitude_e7": 579000000,
+        "longitude_e7": 559000000,
+        "ground_speed_centi_kph": 900
+      },
+      "expect": [{"id": 3, "type": "done"}]
+    },
+    {
+      "send": {"id": 4, "command": "advance", "milliseconds": 100},
+      "expect": [
+        {
+          "id": 4,
+          "type": "state",
+          "full": false,
+          "state": {
+            "timestamp_ms": 100,
+            "revision": 2,
+            "navigation": {
+              "latitude_e7": 579000000,
+              "longitude_e7": 559000000,
+              "ground_speed_centi_kph": 900,
+              "fix_valid": true,
+              "revision": 1
+            }
+          }
+        },
+        {"id": 4, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 5,
+        "command": "gnss_set",
+        "valid": true,
+        "latitude_e7": 580050000,
+        "longitude_e7": 560050000,
+        "ground_speed_centi_kph": 1000
+      },
+      "expect": [{"id": 5, "type": "done"}]
+    },
+    {
+      "send": {"id": 6, "command": "advance", "milliseconds": 100},
+      "expect": [
+        {
+          "id": 6,
+          "type": "state",
+          "full": false,
+          "state": {
+            "timestamp_ms": 200,
+            "revision": 3,
+            "navigation": {
+              "latitude_e7": 580050000,
+              "longitude_e7": 560050000,
+              "ground_speed_centi_kph": 1000,
+              "fix_valid": true,
+              "revision": 2
+            }
+          }
+        },
+        {"id": 6, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 7,
+        "command": "service_rx",
+        "service_data": [2, 1, 232, 3, 0, 0]
+      },
+      "expect": [
+        {
+          "id": 7,
+          "type": "state",
+          "full": false,
+          "state": {
+            "geofences": {
+              "inside_mask": 1,
+              "position_valid": true,
+              "revision": 1
+            }
+          }
+        },
+        {"id": 7, "type": "service_tx", "data": [130, 0]},
+        {"id": 7, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 8,
+        "command": "gnss_set",
+        "valid": true,
+        "latitude_e7": 579000000,
+        "longitude_e7": 559000000,
+        "ground_speed_centi_kph": 1100
+      },
+      "expect": [{"id": 8, "type": "done"}]
+    },
+    {
+      "send": {"id": 9, "command": "advance", "milliseconds": 100},
+      "expect": [
+        {
+          "id": 9,
+          "type": "state",
+          "full": false,
+          "state": {
+            "timestamp_ms": 300,
+            "revision": 4,
+            "navigation": {
+              "latitude_e7": 579000000,
+              "longitude_e7": 559000000,
+              "ground_speed_centi_kph": 1100,
+              "fix_valid": true,
+              "revision": 3
+            },
+            "geofences": {
+              "inside_mask": 0,
+              "position_valid": true,
+              "revision": 2
+            },
+            "server_transmission": {
+              "queued_messages": 1,
+              "dropped_messages": 0,
+              "sent_messages": 0,
+              "revision": 1
+            }
+          }
+        },
+        {"id": 9, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 10, "command": "server_online", "online": true},
+      "expect": [
+        {
+          "id": 10,
+          "type": "state",
+          "full": false,
+          "state": {
+            "server_transmission": {
+              "queued_messages": 0,
+              "dropped_messages": 0,
+              "sent_messages": 1,
+              "revision": 2
+            }
+          }
+        },
+        {
+          "id": 10,
+          "type": "server_tx",
+          "message_id": 1,
+          "payload": [
+            17, 1, 44, 1, 0, 0, 192, 214,
+            130, 34, 192, 169, 81, 33, 76, 4
+          ]
+        },
+        {"id": 10, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 11, "command": "shutdown"},
+      "expect": [{"id": 11, "type": "done"}]
+    }
+  ]
+}
