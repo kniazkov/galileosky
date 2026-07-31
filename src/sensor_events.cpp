@@ -8,8 +8,9 @@
 
 #include "modules/sensor_events.hpp"
 
-#include "drivers/server_transport.hpp"
-#include "modules/server_transmission.hpp"
+#include "modules/event_messages.hpp"
+
+#include <array>
 
 namespace {
 
@@ -18,29 +19,28 @@ constexpr std::uint8_t door_open_event = 2U;
 constexpr std::uint8_t alarm_event = 3U;
 
 /**
- * @brief Хранит наблюдавшиеся входы, их уровни и следующий номер сообщения.
+ * @brief Хранит наблюдавшиеся входы и их последние уровни.
  */
 struct EventState {
     std::uint8_t observed_mask{};
     std::uint8_t active_mask{};
-    std::uint32_t next_message_id{1U};
 };
 
 EventState state{};
 
-drivers::server_transport::Message make_message(
+void send_event(
     const std::uint8_t event_code,
     const std::uint32_t timestamp_ms)
 {
-    drivers::server_transport::Message message{};
-    message.message_id = state.next_message_id;
-    message.length = 5U;
-    message.payload[0U] = event_code;
-    message.payload[1U] = static_cast<std::uint8_t>(timestamp_ms);
-    message.payload[2U] = static_cast<std::uint8_t>(timestamp_ms >> 8U);
-    message.payload[3U] = static_cast<std::uint8_t>(timestamp_ms >> 16U);
-    message.payload[4U] = static_cast<std::uint8_t>(timestamp_ms >> 24U);
-    return message;
+    std::array<std::uint8_t, 5U> payload{};
+    payload[0U] = event_code;
+    payload[1U] = static_cast<std::uint8_t>(timestamp_ms);
+    payload[2U] = static_cast<std::uint8_t>(timestamp_ms >> 8U);
+    payload[3U] = static_cast<std::uint8_t>(timestamp_ms >> 16U);
+    payload[4U] = static_cast<std::uint8_t>(timestamp_ms >> 24U);
+    modules::event_messages::enqueue(
+        payload.data(),
+        static_cast<std::uint8_t>(payload.size()));
 }
 
 void process_input(
@@ -59,11 +59,7 @@ void process_input(
 
     const bool was_active = (state.active_mask & validity_bit) != 0U;
     if (active && !was_active) {
-        const drivers::server_transport::Message message =
-            make_message(event_code, timestamp_ms);
-        if (modules::server_transmission::enqueue(message)) {
-            ++state.next_message_id;
-        }
+        send_event(event_code, timestamp_ms);
     }
 
     if (active) {
@@ -80,7 +76,6 @@ namespace modules::sensor_events {
 void reset()
 {
     state = {};
-    state.next_message_id = 1U;
 }
 
 void tick(

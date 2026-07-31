@@ -29,6 +29,18 @@
               "valid_mask": 0,
               "revision": 0
             },
+            "navigation": {
+              "latitude_e7": 0,
+              "longitude_e7": 0,
+              "ground_speed_centi_kph": 0,
+              "fix_valid": false,
+              "revision": 0
+            },
+            "geofences": {
+              "inside_mask": 0,
+              "position_valid": false,
+              "revision": 0
+            },
             "server_transmission": {
               "queued_messages": 0,
               "dropped_messages": 0,
@@ -96,6 +108,18 @@
               "door_open": false,
               "alarm": false,
               "valid_mask": 0,
+              "revision": 0
+            },
+            "navigation": {
+              "latitude_e7": 0,
+              "longitude_e7": 0,
+              "ground_speed_centi_kph": 0,
+              "fix_valid": false,
+              "revision": 0
+            },
+            "geofences": {
+              "inside_mask": 0,
+              "position_valid": false,
               "revision": 0
             },
             "server_transmission": {

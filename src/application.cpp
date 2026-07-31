@@ -10,8 +10,12 @@
 #include "application/application.hpp"
 
 #include "drivers/can.hpp"
+#include "drivers/gnss.hpp"
 #include "drivers/server_transport.hpp"
 #include "drivers/sensors.hpp"
+#include "modules/event_messages.hpp"
+#include "modules/geofences.hpp"
+#include "modules/navigation.hpp"
 #include "modules/sensor_events.hpp"
 #include "modules/server_transmission.hpp"
 #include "modules/sensors.hpp"
@@ -38,8 +42,12 @@ void reset()
 {
     state = {};
     drivers::can::reset();
+    drivers::gnss::reset();
     drivers::server_transport::reset();
     drivers::sensors::reset();
+    modules::event_messages::reset();
+    modules::geofences::reset();
+    modules::navigation::reset();
     modules::sensor_events::reset();
     modules::server_transmission::reset();
     modules::sensors::reset();
@@ -55,6 +63,10 @@ TickResult tick(const std::uint32_t timestamp_ms)
     }
 
     modules::vehicle::tick(timestamp_ms);
+    modules::navigation::tick(timestamp_ms);
+    modules::geofences::tick(
+        timestamp_ms,
+        modules::navigation::snapshot());
     modules::sensors::tick(timestamp_ms);
     modules::sensor_events::tick(timestamp_ms, modules::sensors::snapshot());
     return TickResult{modules::server_transmission::tick()};
@@ -67,6 +79,8 @@ StateSnapshot snapshot()
         state.revision,
         modules::vehicle::snapshot(),
         modules::sensors::snapshot(),
+        modules::navigation::snapshot(),
+        modules::geofences::snapshot(),
         modules::server_transmission::snapshot()};
 }
 

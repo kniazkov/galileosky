@@ -13,7 +13,11 @@ set_property(CACHE GALILEOSKY_PLATFORM PROPERTY STRINGS desktop stm32g030)
 add_executable(${PROJECT_NAME}
     src/application.cpp
     src/can.cpp
+    src/event_messages.cpp
+    src/geofences.cpp
+    src/gnss.cpp
     src/main.cpp
+    src/navigation.cpp
     src/obd2.cpp
     src/sensor_events.cpp
     src/server_transmission.cpp
@@ -29,6 +33,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 if(GALILEOSKY_PLATFORM STREQUAL "desktop")
     target_sources(${PROJECT_NAME} PRIVATE
         platform/desktop/can_driver.cpp
+        platform/desktop/gnss.cpp
         platform/desktop/runner.cpp
         platform/desktop/server_transport.cpp
         platform/desktop/sensors.cpp
@@ -74,6 +79,7 @@ elseif(GALILEOSKY_PLATFORM STREQUAL "stm32g030")
 
     target_sources(${PROJECT_NAME} PRIVATE
         platform/stm32g030/can_driver.cpp
+        platform/stm32g030/gnss.cpp
         platform/stm32g030/runner.cpp
         platform/stm32g030/runtime.cpp
         platform/stm32g030/server_transport.cpp
