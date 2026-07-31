@@ -19,6 +19,12 @@
               "check_engine": false,
               "valid_mask": 0,
               "revision": 0
+            },
+            "server_transmission": {
+              "queued_messages": 0,
+              "dropped_messages": 0,
+              "sent_messages": 0,
+              "revision": 0
             }
           }
         },
@@ -72,6 +78,12 @@
               "fuel_level_percent": 0,
               "check_engine": false,
               "valid_mask": 0,
+              "revision": 0
+            },
+            "server_transmission": {
+              "queued_messages": 0,
+              "dropped_messages": 0,
+              "sent_messages": 0,
               "revision": 0
             }
           }

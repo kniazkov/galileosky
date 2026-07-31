@@ -10,6 +10,8 @@
 #include "application/application.hpp"
 
 #include "drivers/can.hpp"
+#include "drivers/server_transport.hpp"
+#include "modules/server_transmission.hpp"
 #include "modules/vehicle.hpp"
 
 namespace {
@@ -33,6 +35,8 @@ void reset()
 {
     state = {};
     drivers::can::reset();
+    drivers::server_transport::reset();
+    modules::server_transmission::reset();
     modules::vehicle::reset();
 }
 
@@ -45,7 +49,7 @@ TickResult tick(const std::uint32_t timestamp_ms)
     }
 
     modules::vehicle::tick(timestamp_ms);
-    return TickResult{false};
+    return TickResult{modules::server_transmission::tick()};
 }
 
 StateSnapshot snapshot()
@@ -53,7 +57,8 @@ StateSnapshot snapshot()
     return StateSnapshot{
         state.timestamp_ms,
         state.revision,
-        modules::vehicle::snapshot()};
+        modules::vehicle::snapshot(),
+        modules::server_transmission::snapshot()};
 }
 
 }  // пространство имён application

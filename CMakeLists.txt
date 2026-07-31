@@ -15,6 +15,8 @@ add_executable(${PROJECT_NAME}
     src/can.cpp
     src/main.cpp
     src/obd2.cpp
+    src/server_transmission.cpp
+    src/server_transport.cpp
     src/vehicle.cpp
 )
 
@@ -26,6 +28,7 @@ if(GALILEOSKY_PLATFORM STREQUAL "desktop")
     target_sources(${PROJECT_NAME} PRIVATE
         platform/desktop/can_driver.cpp
         platform/desktop/runner.cpp
+        platform/desktop/server_transport.cpp
     )
 
     include(CTest)
@@ -70,6 +73,7 @@ elseif(GALILEOSKY_PLATFORM STREQUAL "stm32g030")
         platform/stm32g030/can_driver.cpp
         platform/stm32g030/runner.cpp
         platform/stm32g030/runtime.cpp
+        platform/stm32g030/server_transport.cpp
         startup/startup_stm32g030.s
     )
 
