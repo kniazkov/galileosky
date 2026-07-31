@@ -1,0 +1,222 @@
+{
+  "name": "Серверный транспорт и переполнение очереди",
+  "steps": [
+    {
+      "send": {"id": 1, "command": "tick", "timestamp_ms": 0},
+      "expect": [
+        {
+          "id": 1,
+          "type": "state",
+          "full": false,
+          "state": {"timestamp_ms": 0, "revision": 1}
+        },
+        {"id": 1, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 2,
+        "command": "server_enqueue",
+        "message_id": 101,
+        "payload": [1, 10]
+      },
+      "expect": [
+        {
+          "id": 2,
+          "type": "state",
+          "full": false,
+          "state": {
+            "server_transmission": {
+              "queued_messages": 1,
+              "dropped_messages": 0,
+              "sent_messages": 0,
+              "revision": 1
+            }
+          }
+        },
+        {"id": 2, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 3,
+        "command": "server_enqueue",
+        "message_id": 102,
+        "payload": [2, 20]
+      },
+      "expect": [
+        {
+          "id": 3,
+          "type": "state",
+          "full": false,
+          "state": {
+            "server_transmission": {
+              "queued_messages": 2,
+              "dropped_messages": 0,
+              "sent_messages": 0,
+              "revision": 2
+            }
+          }
+        },
+        {"id": 3, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 4,
+        "command": "server_enqueue",
+        "message_id": 103,
+        "payload": [3, 30]
+      },
+      "expect": [
+        {
+          "id": 4,
+          "type": "state",
+          "full": false,
+          "state": {
+            "server_transmission": {
+              "queued_messages": 3,
+              "dropped_messages": 0,
+              "sent_messages": 0,
+              "revision": 3
+            }
+          }
+        },
+        {"id": 4, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 5,
+        "command": "server_enqueue",
+        "message_id": 104,
+        "payload": [4, 40]
+      },
+      "expect": [
+        {
+          "id": 5,
+          "type": "state",
+          "full": false,
+          "state": {
+            "server_transmission": {
+              "queued_messages": 4,
+              "dropped_messages": 0,
+              "sent_messages": 0,
+              "revision": 4
+            }
+          }
+        },
+        {"id": 5, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 6,
+        "command": "server_enqueue",
+        "message_id": 105,
+        "payload": [5, 50]
+      },
+      "expect": [
+        {
+          "id": 6,
+          "type": "state",
+          "full": false,
+          "state": {
+            "server_transmission": {
+              "queued_messages": 4,
+              "dropped_messages": 1,
+              "sent_messages": 0,
+              "revision": 5
+            }
+          }
+        },
+        {"id": 6, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 7, "command": "server_online", "online": true},
+      "expect": [
+        {
+          "id": 7,
+          "type": "state",
+          "full": false,
+          "state": {
+            "server_transmission": {
+              "queued_messages": 0,
+              "dropped_messages": 1,
+              "sent_messages": 4,
+              "revision": 9
+            }
+          }
+        },
+        {
+          "id": 7,
+          "type": "server_tx",
+          "message_id": 102,
+          "payload": [2, 20]
+        },
+        {
+          "id": 7,
+          "type": "server_tx",
+          "message_id": 103,
+          "payload": [3, 30]
+        },
+        {
+          "id": 7,
+          "type": "server_tx",
+          "message_id": 104,
+          "payload": [4, 40]
+        },
+        {
+          "id": 7,
+          "type": "server_tx",
+          "message_id": 105,
+          "payload": [5, 50]
+        },
+        {"id": 7, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 8,
+        "command": "server_enqueue",
+        "message_id": 106,
+        "payload": [6, 60]
+      },
+      "expect": [
+        {
+          "id": 8,
+          "type": "state",
+          "full": false,
+          "state": {
+            "server_transmission": {
+              "queued_messages": 0,
+              "dropped_messages": 1,
+              "sent_messages": 5,
+              "revision": 11
+            }
+          }
+        },
+        {
+          "id": 8,
+          "type": "server_tx",
+          "message_id": 106,
+          "payload": [6, 60]
+        },
+        {"id": 8, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 9, "command": "server_online", "online": false},
+      "expect": [
+        {"id": 9, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 10, "command": "shutdown"},
+      "expect": [
+        {"id": 10, "type": "done"}
+      ]
+    }
+  ]
+}

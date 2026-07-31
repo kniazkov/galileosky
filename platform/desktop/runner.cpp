@@ -10,7 +10,10 @@
 
 #include "application/application.hpp"
 #include "drivers/can.hpp"
+#include "drivers/server_transport.hpp"
+#include "modules/server_transmission.hpp"
 #include "platform/desktop/can_adapter.hpp"
+#include "platform/desktop/server_transport_adapter.hpp"
 #include "platform/runtime.hpp"
 
 #include <array>
@@ -34,6 +37,8 @@ enum class Command {
     tick,
     advance,
     can_rx,
+    server_enqueue,
+    server_online,
     snapshot,
     reset,
     shutdown
@@ -47,6 +52,8 @@ struct Request {
     Command command;
     std::uint32_t argument;
     drivers::can::Frame can_frame;
+    drivers::server_transport::Message server_message;
+    bool server_online;
 };
 
 /**
@@ -186,11 +193,29 @@ public:
     }
 
     /**
-     * @brief Считывает массив байтов полезной нагрузки CAN.
+     * @brief Считывает логическое значение JSON.
+     */
+    bool read_boolean()
+    {
+        skip_whitespace();
+        if (input_.substr(position_, 4U) == "true") {
+            position_ += 4U;
+            return true;
+        }
+        if (input_.substr(position_, 5U) == "false") {
+            position_ += 5U;
+            return false;
+        }
+        throw ProtocolError{"ожидалось логическое значение"};
+    }
+
+    /**
+     * @brief Считывает массив байтов с ограниченной ёмкостью.
      * @return Количество считанных байтов.
      */
+    template<std::size_t capacity>
     std::uint8_t read_byte_array(
-        std::array<std::uint8_t, drivers::can::maximum_data_length>& values)
+        std::array<std::uint8_t, capacity>& values)
     {
         expect('[');
         std::uint8_t length = 0U;
@@ -200,12 +225,12 @@ public:
 
         for (;;) {
             if (length == values.size()) {
-                throw ProtocolError{"полезная нагрузка CAN длиннее восьми байт"};
+                throw ProtocolError{"массив байтов превышает допустимый размер"};
             }
 
             const std::uint64_t value = read_unsigned();
             if (value > std::numeric_limits<std::uint8_t>::max()) {
-                throw ProtocolError{"байт CAN не помещается в 8 бит"};
+                throw ProtocolError{"значение не помещается в один байт"};
             }
             values[length] = static_cast<std::uint8_t>(value);
             ++length;
@@ -263,6 +288,12 @@ Command parse_command(const std::string& value)
     if (value == "can_rx") {
         return Command::can_rx;
     }
+    if (value == "server_enqueue") {
+        return Command::server_enqueue;
+    }
+    if (value == "server_online") {
+        return Command::server_online;
+    }
     if (value == "snapshot") {
         return Command::snapshot;
     }
@@ -284,6 +315,8 @@ Request parse_request(const std::string& line)
     std::uint32_t timestamp_ms = 0U;
     std::uint32_t milliseconds = 0U;
     drivers::can::Frame can_frame{};
+    drivers::server_transport::Message server_message{};
+    bool server_online = false;
     std::string command_text;
     bool has_id = false;
     bool has_command = false;
@@ -291,6 +324,9 @@ Request parse_request(const std::string& line)
     bool has_milliseconds = false;
     bool has_can_id = false;
     bool has_can_data = false;
+    bool has_message_id = false;
+    bool has_payload = false;
+    bool has_server_online = false;
 
     if (!reader.consume('}')) {
         for (;;) {
@@ -338,6 +374,26 @@ Request parse_request(const std::string& line)
                 }
                 can_frame.length = reader.read_byte_array(can_frame.data);
                 has_can_data = true;
+            } else if (key == "message_id") {
+                if (has_message_id) {
+                    throw ProtocolError{"поле message_id указано несколько раз"};
+                }
+                server_message.message_id =
+                    narrow_to_u32(reader.read_unsigned());
+                has_message_id = true;
+            } else if (key == "payload") {
+                if (has_payload) {
+                    throw ProtocolError{"поле payload указано несколько раз"};
+                }
+                server_message.length =
+                    reader.read_byte_array(server_message.payload);
+                has_payload = true;
+            } else if (key == "online") {
+                if (has_server_online) {
+                    throw ProtocolError{"поле online указано несколько раз"};
+                }
+                server_online = reader.read_boolean();
+                has_server_online = true;
             } else {
                 throw ProtocolError{"неизвестное поле команды"};
             }
@@ -355,29 +411,47 @@ Request parse_request(const std::string& line)
     }
 
     const Command command = parse_command(command_text);
+    const bool has_server_message = has_message_id || has_payload;
     switch (command) {
     case Command::tick:
-        if (!has_timestamp || has_milliseconds || has_can_id || has_can_data) {
+        if (!has_timestamp || has_milliseconds || has_can_id || has_can_data
+            || has_server_message || has_server_online) {
             throw ProtocolError{"команде tick требуется только timestamp_ms"};
         }
-        return Request{id, command, timestamp_ms, {}};
+        return Request{id, command, timestamp_ms, {}, {}, false};
     case Command::advance:
-        if (!has_milliseconds || has_timestamp || has_can_id || has_can_data) {
+        if (!has_milliseconds || has_timestamp || has_can_id || has_can_data
+            || has_server_message || has_server_online) {
             throw ProtocolError{"команде advance требуется только milliseconds"};
         }
-        return Request{id, command, milliseconds, {}};
+        return Request{id, command, milliseconds, {}, {}, false};
     case Command::can_rx:
-        if (has_timestamp || has_milliseconds || !has_can_id || !has_can_data) {
+        if (has_timestamp || has_milliseconds || !has_can_id || !has_can_data
+            || has_server_message || has_server_online) {
             throw ProtocolError{"команде can_rx требуются can_id и data"};
         }
-        return Request{id, command, 0U, can_frame};
+        return Request{id, command, 0U, can_frame, {}, false};
+    case Command::server_enqueue:
+        if (has_timestamp || has_milliseconds || has_can_id || has_can_data
+            || !has_message_id || !has_payload || has_server_online) {
+            throw ProtocolError{
+                "команде server_enqueue требуются message_id и payload"};
+        }
+        return Request{id, command, 0U, {}, server_message, false};
+    case Command::server_online:
+        if (has_timestamp || has_milliseconds || has_can_id || has_can_data
+            || has_server_message || !has_server_online) {
+            throw ProtocolError{"команде server_online требуется поле online"};
+        }
+        return Request{id, command, 0U, {}, {}, server_online};
     case Command::snapshot:
     case Command::reset:
     case Command::shutdown:
-        if (has_timestamp || has_milliseconds || has_can_id || has_can_data) {
-            throw ProtocolError{"команда не принимает числовой аргумент"};
+        if (has_timestamp || has_milliseconds || has_can_id || has_can_data
+            || has_server_message || has_server_online) {
+            throw ProtocolError{"команда не принимает дополнительные поля"};
         }
-        return Request{id, command, 0U, {}};
+        return Request{id, command, 0U, {}, {}, false};
     }
 
     throw ProtocolError{"невозможное значение команды"};
@@ -447,7 +521,12 @@ public:
             !reported_ || state.revision != last_revision_;
         const bool vehicle_changed =
             state.vehicle.revision != last_vehicle_revision_;
-        if (!force_full && !application_changed && !vehicle_changed) {
+        const bool server_changed =
+            state.server_transmission.revision != last_server_revision_;
+        if (!force_full
+            && !application_changed
+            && !vehicle_changed
+            && !server_changed) {
             return;
         }
 
@@ -485,12 +564,32 @@ public:
                 << static_cast<unsigned int>(state.vehicle.valid_mask)
                 << ",\"revision\":" << state.vehicle.revision
                 << '}';
+            field_written = true;
+        }
+
+        if (force_full || server_changed) {
+            if (field_written) {
+                std::cout << ',';
+            }
+            std::cout
+                << "\"server_transmission\":{"
+                << "\"queued_messages\":"
+                << static_cast<unsigned int>(
+                    state.server_transmission.queued_messages)
+                << ",\"dropped_messages\":"
+                << state.server_transmission.dropped_messages
+                << ",\"sent_messages\":"
+                << state.server_transmission.sent_messages
+                << ",\"revision\":"
+                << state.server_transmission.revision
+                << '}';
         }
 
         std::cout << "}}" << std::endl;
 
         last_revision_ = state.revision;
         last_vehicle_revision_ = state.vehicle.revision;
+        last_server_revision_ = state.server_transmission.revision;
         reported_ = true;
     }
 
@@ -501,11 +600,13 @@ public:
     {
         reported_ = false;
         last_vehicle_revision_ = 0U;
+        last_server_revision_ = 0U;
     }
 
 private:
     std::uint32_t last_revision_{};
     std::uint32_t last_vehicle_revision_{};
+    std::uint32_t last_server_revision_{};
     bool reported_{};
 };
 
@@ -524,6 +625,26 @@ void send_can_frames(const std::uint64_t id)
                 std::cout << ',';
             }
             std::cout << static_cast<unsigned int>(frame.data[index]);
+        }
+        std::cout << "]}" << std::endl;
+    }
+}
+
+void send_server_messages(const std::uint64_t id)
+{
+    drivers::server_transport::Message message{};
+    while (platform::desktop_server_transport::pop_transmitted(message)) {
+        std::cout
+            << "{\"id\":" << id
+            << ",\"type\":\"server_tx\",\"message_id\":"
+            << message.message_id
+            << ",\"payload\":[";
+
+        for (std::uint8_t index = 0U; index < message.length; ++index) {
+            if (index != 0U) {
+                std::cout << ',';
+            }
+            std::cout << static_cast<unsigned int>(message.payload[index]);
         }
         std::cout << "]}" << std::endl;
     }
@@ -574,6 +695,7 @@ int run_application()
                 run_until_stable(virtual_timestamp_ms);
                 reporter.send_state(request.id, false);
                 send_can_frames(request.id);
+                send_server_messages(request.id);
                 send_done(request.id);
                 break;
             case Command::advance:
@@ -581,6 +703,7 @@ int run_application()
                 run_until_stable(virtual_timestamp_ms);
                 reporter.send_state(request.id, false);
                 send_can_frames(request.id);
+                send_server_messages(request.id);
                 send_done(request.id);
                 break;
             case Command::can_rx:
@@ -590,6 +713,24 @@ int run_application()
                 run_until_stable(virtual_timestamp_ms);
                 reporter.send_state(request.id, false);
                 send_can_frames(request.id);
+                send_server_messages(request.id);
+                send_done(request.id);
+                break;
+            case Command::server_enqueue:
+                if (!modules::server_transmission::enqueue(
+                        request.server_message)) {
+                    throw ProtocolError{"серверное сообщение отклонено"};
+                }
+                run_until_stable(virtual_timestamp_ms);
+                reporter.send_state(request.id, false);
+                send_server_messages(request.id);
+                send_done(request.id);
+                break;
+            case Command::server_online:
+                desktop_server_transport::set_available(request.server_online);
+                run_until_stable(virtual_timestamp_ms);
+                reporter.send_state(request.id, false);
+                send_server_messages(request.id);
                 send_done(request.id);
                 break;
             case Command::snapshot:
