@@ -10,6 +10,7 @@
 #pragma once
 
 #include "modules/server_transmission.hpp"
+#include "modules/sensors.hpp"
 #include "modules/vehicle.hpp"
 
 #include <cstdint>
@@ -30,6 +31,7 @@ struct StateSnapshot {
     std::uint32_t timestamp_ms;
     std::uint32_t revision;
     modules::vehicle::Snapshot vehicle;
+    modules::sensors::Snapshot sensors;
     modules::server_transmission::Snapshot server_transmission;
 };
 

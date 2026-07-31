@@ -20,6 +20,15 @@
               "valid_mask": 0,
               "revision": 0
             },
+            "sensors": {
+              "supply_voltage_adc": 0,
+              "external_input_adc": 0,
+              "ignition": false,
+              "door_open": false,
+              "alarm": false,
+              "valid_mask": 0,
+              "revision": 0
+            },
             "server_transmission": {
               "queued_messages": 0,
               "dropped_messages": 0,
@@ -77,6 +86,15 @@
               "coolant_temperature_c": 0,
               "fuel_level_percent": 0,
               "check_engine": false,
+              "valid_mask": 0,
+              "revision": 0
+            },
+            "sensors": {
+              "supply_voltage_adc": 0,
+              "external_input_adc": 0,
+              "ignition": false,
+              "door_open": false,
+              "alarm": false,
               "valid_mask": 0,
               "revision": 0
             },

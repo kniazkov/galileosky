@@ -11,7 +11,10 @@
 
 #include "drivers/can.hpp"
 #include "drivers/server_transport.hpp"
+#include "drivers/sensors.hpp"
+#include "modules/sensor_events.hpp"
 #include "modules/server_transmission.hpp"
+#include "modules/sensors.hpp"
 #include "modules/vehicle.hpp"
 
 namespace {
@@ -36,7 +39,10 @@ void reset()
     state = {};
     drivers::can::reset();
     drivers::server_transport::reset();
+    drivers::sensors::reset();
+    modules::sensor_events::reset();
     modules::server_transmission::reset();
+    modules::sensors::reset();
     modules::vehicle::reset();
 }
 
@@ -49,6 +55,8 @@ TickResult tick(const std::uint32_t timestamp_ms)
     }
 
     modules::vehicle::tick(timestamp_ms);
+    modules::sensors::tick(timestamp_ms);
+    modules::sensor_events::tick(timestamp_ms, modules::sensors::snapshot());
     return TickResult{modules::server_transmission::tick()};
 }
 
@@ -58,6 +66,7 @@ StateSnapshot snapshot()
         state.timestamp_ms,
         state.revision,
         modules::vehicle::snapshot(),
+        modules::sensors::snapshot(),
         modules::server_transmission::snapshot()};
 }
 

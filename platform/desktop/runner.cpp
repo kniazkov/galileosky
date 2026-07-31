@@ -11,9 +11,11 @@
 #include "application/application.hpp"
 #include "drivers/can.hpp"
 #include "drivers/server_transport.hpp"
+#include "drivers/sensors.hpp"
 #include "modules/server_transmission.hpp"
 #include "platform/desktop/can_adapter.hpp"
 #include "platform/desktop/server_transport_adapter.hpp"
+#include "platform/desktop/sensors_adapter.hpp"
 #include "platform/runtime.hpp"
 
 #include <array>
@@ -37,6 +39,8 @@ enum class Command {
     tick,
     advance,
     can_rx,
+    adc_set,
+    digital_set,
     server_enqueue,
     server_online,
     snapshot,
@@ -54,6 +58,9 @@ struct Request {
     drivers::can::Frame can_frame;
     drivers::server_transport::Message server_message;
     bool server_online;
+    std::uint8_t sensor_channel;
+    std::uint16_t sensor_value;
+    bool sensor_active;
 };
 
 /**
@@ -288,6 +295,12 @@ Command parse_command(const std::string& value)
     if (value == "can_rx") {
         return Command::can_rx;
     }
+    if (value == "adc_set") {
+        return Command::adc_set;
+    }
+    if (value == "digital_set") {
+        return Command::digital_set;
+    }
     if (value == "server_enqueue") {
         return Command::server_enqueue;
     }
@@ -317,6 +330,9 @@ Request parse_request(const std::string& line)
     drivers::can::Frame can_frame{};
     drivers::server_transport::Message server_message{};
     bool server_online = false;
+    std::uint8_t sensor_channel = 0U;
+    std::uint16_t sensor_value = 0U;
+    bool sensor_active = false;
     std::string command_text;
     bool has_id = false;
     bool has_command = false;
@@ -327,6 +343,9 @@ Request parse_request(const std::string& line)
     bool has_message_id = false;
     bool has_payload = false;
     bool has_server_online = false;
+    bool has_sensor_channel = false;
+    bool has_sensor_value = false;
+    bool has_sensor_active = false;
 
     if (!reader.consume('}')) {
         for (;;) {
@@ -394,6 +413,32 @@ Request parse_request(const std::string& line)
                 }
                 server_online = reader.read_boolean();
                 has_server_online = true;
+            } else if (key == "channel") {
+                if (has_sensor_channel) {
+                    throw ProtocolError{"поле channel указано несколько раз"};
+                }
+                const std::uint64_t channel = reader.read_unsigned();
+                if (channel > std::numeric_limits<std::uint8_t>::max()) {
+                    throw ProtocolError{"номер канала не помещается в 8 бит"};
+                }
+                sensor_channel = static_cast<std::uint8_t>(channel);
+                has_sensor_channel = true;
+            } else if (key == "adc_value") {
+                if (has_sensor_value) {
+                    throw ProtocolError{"поле adc_value указано несколько раз"};
+                }
+                const std::uint64_t value = reader.read_unsigned();
+                if (value > drivers::sensors::maximum_adc_value) {
+                    throw ProtocolError{"adc_value должен быть от 0 до 4095"};
+                }
+                sensor_value = static_cast<std::uint16_t>(value);
+                has_sensor_value = true;
+            } else if (key == "active") {
+                if (has_sensor_active) {
+                    throw ProtocolError{"поле active указано несколько раз"};
+                }
+                sensor_active = reader.read_boolean();
+                has_sensor_active = true;
             } else {
                 throw ProtocolError{"неизвестное поле команды"};
             }
@@ -412,46 +457,90 @@ Request parse_request(const std::string& line)
 
     const Command command = parse_command(command_text);
     const bool has_server_message = has_message_id || has_payload;
+    const bool has_sensor_fields =
+        has_sensor_channel || has_sensor_value || has_sensor_active;
     switch (command) {
     case Command::tick:
         if (!has_timestamp || has_milliseconds || has_can_id || has_can_data
-            || has_server_message || has_server_online) {
+            || has_server_message || has_server_online || has_sensor_fields) {
             throw ProtocolError{"команде tick требуется только timestamp_ms"};
         }
-        return Request{id, command, timestamp_ms, {}, {}, false};
+        return Request{
+            id, command, timestamp_ms, {}, {}, false, 0U, 0U, false};
     case Command::advance:
         if (!has_milliseconds || has_timestamp || has_can_id || has_can_data
-            || has_server_message || has_server_online) {
+            || has_server_message || has_server_online || has_sensor_fields) {
             throw ProtocolError{"команде advance требуется только milliseconds"};
         }
-        return Request{id, command, milliseconds, {}, {}, false};
+        return Request{
+            id, command, milliseconds, {}, {}, false, 0U, 0U, false};
     case Command::can_rx:
         if (has_timestamp || has_milliseconds || !has_can_id || !has_can_data
-            || has_server_message || has_server_online) {
+            || has_server_message || has_server_online || has_sensor_fields) {
             throw ProtocolError{"команде can_rx требуются can_id и data"};
         }
-        return Request{id, command, 0U, can_frame, {}, false};
+        return Request{
+            id, command, 0U, can_frame, {}, false, 0U, 0U, false};
+    case Command::adc_set:
+        if (has_timestamp || has_milliseconds || has_can_id || has_can_data
+            || has_server_message || has_server_online
+            || !has_sensor_channel || !has_sensor_value || has_sensor_active
+            || sensor_channel > 1U) {
+            throw ProtocolError{
+                "команде adc_set требуются channel 0..1 и adc_value"};
+        }
+        return Request{
+            id,
+            command,
+            0U,
+            {},
+            {},
+            false,
+            sensor_channel,
+            sensor_value,
+            false};
+    case Command::digital_set:
+        if (has_timestamp || has_milliseconds || has_can_id || has_can_data
+            || has_server_message || has_server_online
+            || !has_sensor_channel || has_sensor_value || !has_sensor_active
+            || sensor_channel > 2U) {
+            throw ProtocolError{
+                "команде digital_set требуются channel 0..2 и active"};
+        }
+        return Request{
+            id,
+            command,
+            0U,
+            {},
+            {},
+            false,
+            sensor_channel,
+            0U,
+            sensor_active};
     case Command::server_enqueue:
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
-            || !has_message_id || !has_payload || has_server_online) {
+            || !has_message_id || !has_payload || has_server_online
+            || has_sensor_fields) {
             throw ProtocolError{
                 "команде server_enqueue требуются message_id и payload"};
         }
-        return Request{id, command, 0U, {}, server_message, false};
+        return Request{
+            id, command, 0U, {}, server_message, false, 0U, 0U, false};
     case Command::server_online:
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
-            || has_server_message || !has_server_online) {
+            || has_server_message || !has_server_online || has_sensor_fields) {
             throw ProtocolError{"команде server_online требуется поле online"};
         }
-        return Request{id, command, 0U, {}, {}, server_online};
+        return Request{
+            id, command, 0U, {}, {}, server_online, 0U, 0U, false};
     case Command::snapshot:
     case Command::reset:
     case Command::shutdown:
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
-            || has_server_message || has_server_online) {
+            || has_server_message || has_server_online || has_sensor_fields) {
             throw ProtocolError{"команда не принимает дополнительные поля"};
         }
-        return Request{id, command, 0U, {}, {}, false};
+        return Request{id, command, 0U, {}, {}, false, 0U, 0U, false};
     }
 
     throw ProtocolError{"невозможное значение команды"};
@@ -523,10 +612,13 @@ public:
             state.vehicle.revision != last_vehicle_revision_;
         const bool server_changed =
             state.server_transmission.revision != last_server_revision_;
+        const bool sensors_changed =
+            state.sensors.revision != last_sensors_revision_;
         if (!force_full
             && !application_changed
             && !vehicle_changed
-            && !server_changed) {
+            && !server_changed
+            && !sensors_changed) {
             return;
         }
 
@@ -567,6 +659,29 @@ public:
             field_written = true;
         }
 
+        if (force_full || sensors_changed) {
+            if (field_written) {
+                std::cout << ',';
+            }
+            std::cout
+                << "\"sensors\":{"
+                << "\"supply_voltage_adc\":"
+                << state.sensors.supply_voltage_adc
+                << ",\"external_input_adc\":"
+                << state.sensors.external_input_adc
+                << ",\"ignition\":"
+                << (state.sensors.ignition ? "true" : "false")
+                << ",\"door_open\":"
+                << (state.sensors.door_open ? "true" : "false")
+                << ",\"alarm\":"
+                << (state.sensors.alarm ? "true" : "false")
+                << ",\"valid_mask\":"
+                << static_cast<unsigned int>(state.sensors.valid_mask)
+                << ",\"revision\":" << state.sensors.revision
+                << '}';
+            field_written = true;
+        }
+
         if (force_full || server_changed) {
             if (field_written) {
                 std::cout << ',';
@@ -590,6 +705,7 @@ public:
         last_revision_ = state.revision;
         last_vehicle_revision_ = state.vehicle.revision;
         last_server_revision_ = state.server_transmission.revision;
+        last_sensors_revision_ = state.sensors.revision;
         reported_ = true;
     }
 
@@ -601,12 +717,14 @@ public:
         reported_ = false;
         last_vehicle_revision_ = 0U;
         last_server_revision_ = 0U;
+        last_sensors_revision_ = 0U;
     }
 
 private:
     std::uint32_t last_revision_{};
     std::uint32_t last_vehicle_revision_{};
     std::uint32_t last_server_revision_{};
+    std::uint32_t last_sensors_revision_{};
     bool reported_{};
 };
 
@@ -710,6 +828,30 @@ int run_application()
                 if (!desktop_can::inject_received(request.can_frame)) {
                     throw ProtocolError{"CAN-драйвер отклонил входящий кадр"};
                 }
+                run_until_stable(virtual_timestamp_ms);
+                reporter.send_state(request.id, false);
+                send_can_frames(request.id);
+                send_server_messages(request.id);
+                send_done(request.id);
+                break;
+            case Command::adc_set:
+                if (!desktop_sensors::set_analog(
+                        static_cast<drivers::sensors::AnalogChannel>(
+                            request.sensor_channel),
+                        request.sensor_value)) {
+                    throw ProtocolError{"ADC-драйвер отклонил значение"};
+                }
+                run_until_stable(virtual_timestamp_ms);
+                reporter.send_state(request.id, false);
+                send_can_frames(request.id);
+                send_server_messages(request.id);
+                send_done(request.id);
+                break;
+            case Command::digital_set:
+                desktop_sensors::set_digital(
+                    static_cast<drivers::sensors::DigitalInput>(
+                        request.sensor_channel),
+                    request.sensor_active);
                 run_until_stable(virtual_timestamp_ms);
                 reporter.send_state(request.id, false);
                 send_can_frames(request.id);
