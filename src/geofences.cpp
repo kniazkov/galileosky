@@ -41,6 +41,8 @@ struct GeofenceState {
     std::uint32_t last_navigation_revision{};
     bool navigation_seen{};
     bool baseline_ready{};
+    bool enabled_seen{};
+    bool enabled{};
 };
 
 GeofenceState state{};
@@ -142,9 +144,25 @@ void reset()
 
 void tick(
     const std::uint32_t timestamp_ms,
-    const modules::navigation::Snapshot& navigation)
+    const modules::navigation::Snapshot& navigation,
+    const bool enabled)
 {
-    if (state.navigation_seen
+    const bool enabled_changed =
+        !state.enabled_seen || enabled != state.enabled;
+    state.enabled_seen = true;
+    state.enabled = enabled;
+
+    if (!enabled) {
+        state.baseline_ready = false;
+        if (state.snapshot.position_valid) {
+            state.snapshot.position_valid = false;
+            ++state.snapshot.revision;
+        }
+        return;
+    }
+
+    if (!enabled_changed
+        && state.navigation_seen
         && navigation.revision == state.last_navigation_revision) {
         return;
     }

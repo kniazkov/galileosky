@@ -11,11 +11,13 @@
 #include "application/application.hpp"
 #include "drivers/can.hpp"
 #include "drivers/gnss.hpp"
+#include "drivers/service_port.hpp"
 #include "drivers/server_transport.hpp"
 #include "drivers/sensors.hpp"
 #include "modules/server_transmission.hpp"
 #include "platform/desktop/can_adapter.hpp"
 #include "platform/desktop/gnss_adapter.hpp"
+#include "platform/desktop/service_port_adapter.hpp"
 #include "platform/desktop/server_transport_adapter.hpp"
 #include "platform/desktop/sensors_adapter.hpp"
 #include "platform/runtime.hpp"
@@ -44,6 +46,7 @@ enum class Command {
     adc_set,
     digital_set,
     gnss_set,
+    service_rx,
     server_enqueue,
     server_online,
     snapshot,
@@ -65,6 +68,7 @@ struct Request {
     std::uint16_t sensor_value;
     bool sensor_active;
     drivers::gnss::Fix gnss_fix;
+    drivers::service_port::Frame service_frame;
 };
 
 /**
@@ -341,6 +345,9 @@ Command parse_command(const std::string& value)
     if (value == "gnss_set") {
         return Command::gnss_set;
     }
+    if (value == "service_rx") {
+        return Command::service_rx;
+    }
     if (value == "server_enqueue") {
         return Command::server_enqueue;
     }
@@ -374,6 +381,7 @@ Request parse_request(const std::string& line)
     std::uint16_t sensor_value = 0U;
     bool sensor_active = false;
     drivers::gnss::Fix gnss_fix{};
+    drivers::service_port::Frame service_frame{};
     std::string command_text;
     bool has_id = false;
     bool has_command = false;
@@ -391,6 +399,7 @@ Request parse_request(const std::string& line)
     bool has_longitude = false;
     bool has_ground_speed = false;
     bool has_fix_valid = false;
+    bool has_service_data = false;
 
     if (!reader.consume('}')) {
         for (;;) {
@@ -517,6 +526,14 @@ Request parse_request(const std::string& line)
                 }
                 gnss_fix.valid = reader.read_boolean();
                 has_fix_valid = true;
+            } else if (key == "service_data") {
+                if (has_service_data) {
+                    throw ProtocolError{
+                        "поле service_data указано несколько раз"};
+                }
+                service_frame.length =
+                    reader.read_byte_array(service_frame.data);
+                has_service_data = true;
             } else {
                 throw ProtocolError{"неизвестное поле команды"};
             }
@@ -543,32 +560,32 @@ Request parse_request(const std::string& line)
     case Command::tick:
         if (!has_timestamp || has_milliseconds || has_can_id || has_can_data
             || has_server_message || has_server_online || has_sensor_fields
-            || has_gnss_fields) {
+            || has_gnss_fields || has_service_data) {
             throw ProtocolError{"команде tick требуется только timestamp_ms"};
         }
         return Request{
-            id, command, timestamp_ms, {}, {}, false, 0U, 0U, false, {}};
+            id, command, timestamp_ms, {}, {}, false, 0U, 0U, false, {}, {}};
     case Command::advance:
         if (!has_milliseconds || has_timestamp || has_can_id || has_can_data
             || has_server_message || has_server_online || has_sensor_fields
-            || has_gnss_fields) {
+            || has_gnss_fields || has_service_data) {
             throw ProtocolError{"команде advance требуется только milliseconds"};
         }
         return Request{
-            id, command, milliseconds, {}, {}, false, 0U, 0U, false, {}};
+            id, command, milliseconds, {}, {}, false, 0U, 0U, false, {}, {}};
     case Command::can_rx:
         if (has_timestamp || has_milliseconds || !has_can_id || !has_can_data
             || has_server_message || has_server_online || has_sensor_fields
-            || has_gnss_fields) {
+            || has_gnss_fields || has_service_data) {
             throw ProtocolError{"команде can_rx требуются can_id и data"};
         }
         return Request{
-            id, command, 0U, can_frame, {}, false, 0U, 0U, false, {}};
+            id, command, 0U, can_frame, {}, false, 0U, 0U, false, {}, {}};
     case Command::adc_set:
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
             || has_server_message || has_server_online
             || !has_sensor_channel || !has_sensor_value || has_sensor_active
-            || sensor_channel > 1U || has_gnss_fields) {
+            || sensor_channel > 1U || has_gnss_fields || has_service_data) {
             throw ProtocolError{
                 "команде adc_set требуются channel 0..1 и adc_value"};
         }
@@ -582,12 +599,13 @@ Request parse_request(const std::string& line)
             sensor_channel,
             sensor_value,
             false,
+            {},
             {}};
     case Command::digital_set:
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
             || has_server_message || has_server_online
             || !has_sensor_channel || has_sensor_value || !has_sensor_active
-            || sensor_channel > 2U || has_gnss_fields) {
+            || sensor_channel > 2U || has_gnss_fields || has_service_data) {
             throw ProtocolError{
                 "команде digital_set требуются channel 0..2 и active"};
         }
@@ -601,11 +619,12 @@ Request parse_request(const std::string& line)
             sensor_channel,
             0U,
             sensor_active,
+            {},
             {}};
     case Command::gnss_set:
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
             || has_server_message || has_server_online || has_sensor_fields
-            || !has_fix_valid
+            || has_service_data || !has_fix_valid
             || (gnss_fix.valid
                 && (!has_latitude || !has_longitude || !has_ground_speed))
             || (!gnss_fix.valid
@@ -624,34 +643,74 @@ Request parse_request(const std::string& line)
             0U,
             0U,
             false,
-            gnss_fix};
+            gnss_fix,
+            {}};
+    case Command::service_rx:
+        if (has_timestamp || has_milliseconds || has_can_id || has_can_data
+            || has_server_message || has_server_online || has_sensor_fields
+            || has_gnss_fields || !has_service_data) {
+            throw ProtocolError{
+                "команде service_rx требуется только service_data"};
+        }
+        return Request{
+            id,
+            command,
+            0U,
+            {},
+            {},
+            false,
+            0U,
+            0U,
+            false,
+            {},
+            service_frame};
     case Command::server_enqueue:
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
             || !has_message_id || !has_payload || has_server_online
-            || has_sensor_fields || has_gnss_fields) {
+            || has_sensor_fields || has_gnss_fields || has_service_data) {
             throw ProtocolError{
                 "команде server_enqueue требуются message_id и payload"};
         }
         return Request{
-            id, command, 0U, {}, server_message, false, 0U, 0U, false, {}};
+            id,
+            command,
+            0U,
+            {},
+            server_message,
+            false,
+            0U,
+            0U,
+            false,
+            {},
+            {}};
     case Command::server_online:
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
             || has_server_message || !has_server_online || has_sensor_fields
-            || has_gnss_fields) {
+            || has_gnss_fields || has_service_data) {
             throw ProtocolError{"команде server_online требуется поле online"};
         }
         return Request{
-            id, command, 0U, {}, {}, server_online, 0U, 0U, false, {}};
+            id,
+            command,
+            0U,
+            {},
+            {},
+            server_online,
+            0U,
+            0U,
+            false,
+            {},
+            {}};
     case Command::snapshot:
     case Command::reset:
     case Command::shutdown:
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
             || has_server_message || has_server_online || has_sensor_fields
-            || has_gnss_fields) {
+            || has_gnss_fields || has_service_data) {
             throw ProtocolError{"команда не принимает дополнительные поля"};
         }
         return Request{
-            id, command, 0U, {}, {}, false, 0U, 0U, false, {}};
+            id, command, 0U, {}, {}, false, 0U, 0U, false, {}, {}};
     }
 
     throw ProtocolError{"невозможное значение команды"};
@@ -925,6 +984,24 @@ void send_server_messages(const std::uint64_t id)
     }
 }
 
+void send_service_frames(const std::uint64_t id)
+{
+    drivers::service_port::Frame frame{};
+    while (platform::desktop_service_port::pop_transmitted(frame)) {
+        std::cout
+            << "{\"id\":" << id
+            << ",\"type\":\"service_tx\",\"data\":[";
+
+        for (std::uint8_t index = 0U; index < frame.length; ++index) {
+            if (index != 0U) {
+                std::cout << ',';
+            }
+            std::cout << static_cast<unsigned int>(frame.data[index]);
+        }
+        std::cout << "]}" << std::endl;
+    }
+}
+
 void send_done(const std::uint64_t id)
 {
     std::cout
@@ -1024,6 +1101,19 @@ int run_application()
                 reporter.send_state(request.id, false);
                 send_can_frames(request.id);
                 send_server_messages(request.id);
+                send_done(request.id);
+                break;
+            case Command::service_rx:
+                if (!desktop_service_port::inject_received(
+                        request.service_frame)) {
+                    throw ProtocolError{
+                        "сервисный драйвер отклонил входящий кадр"};
+                }
+                run_until_stable(virtual_timestamp_ms);
+                reporter.send_state(request.id, false);
+                send_can_frames(request.id);
+                send_server_messages(request.id);
+                send_service_frames(request.id);
                 send_done(request.id);
                 break;
             case Command::server_enqueue:

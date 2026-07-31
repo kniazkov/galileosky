@@ -1,0 +1,238 @@
+{
+  "name": "Конфигурация, диагностика, журнал и watchdog",
+  "steps": [
+    {
+      "send": {"id": 1, "command": "tick", "timestamp_ms": 0},
+      "expect": [
+        {
+          "id": 1,
+          "type": "state",
+          "full": false,
+          "state": {"timestamp_ms": 0, "revision": 1}
+        },
+        {"id": 1, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 2, "command": "service_rx", "service_data": [1]},
+      "expect": [
+        {
+          "id": 2,
+          "type": "service_tx",
+          "data": [129, 0, 1, 232, 3, 0, 0]
+        },
+        {"id": 2, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 3,
+        "command": "service_rx",
+        "service_data": [2, 0, 244, 1, 0, 0]
+      },
+      "expect": [
+        {"id": 3, "type": "service_tx", "data": [130, 0]},
+        {"id": 3, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 4, "command": "service_rx", "service_data": [1]},
+      "expect": [
+        {
+          "id": 4,
+          "type": "service_tx",
+          "data": [129, 0, 0, 244, 1, 0, 0]
+        },
+        {"id": 4, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 5, "command": "advance", "milliseconds": 600},
+      "expect": [
+        {
+          "id": 5,
+          "type": "state",
+          "full": false,
+          "state": {"timestamp_ms": 600, "revision": 2}
+        },
+        {"id": 5, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 6, "command": "service_rx", "service_data": [3]},
+      "expect": [
+        {
+          "id": 6,
+          "type": "service_tx",
+          "data": [
+            131, 0,
+            2, 0, 0, 0,
+            1, 0, 0, 0,
+            1, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            2, 0
+          ]
+        },
+        {"id": 6, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 7, "command": "service_rx", "service_data": [4, 0]},
+      "expect": [
+        {
+          "id": 7,
+          "type": "service_tx",
+          "data": [132, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0]
+        },
+        {"id": 7, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 8, "command": "service_rx", "service_data": [4, 1]},
+      "expect": [
+        {
+          "id": 8,
+          "type": "service_tx",
+          "data": [132, 0, 1, 88, 2, 0, 0, 4, 88, 2, 0, 0]
+        },
+        {"id": 8, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 9,
+        "command": "service_rx",
+        "service_data": [2, 1, 0, 0, 0, 0]
+      },
+      "expect": [
+        {"id": 9, "type": "service_tx", "data": [130, 1]},
+        {"id": 9, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 10, "command": "service_rx", "service_data": [127]},
+      "expect": [
+        {"id": 10, "type": "service_tx", "data": [255, 2]},
+        {"id": 10, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 11, "command": "service_rx", "service_data": [3]},
+      "expect": [
+        {
+          "id": 11,
+          "type": "service_tx",
+          "data": [
+            131, 0,
+            2, 0, 0, 0,
+            1, 0, 0, 0,
+            1, 0, 0, 0,
+            1, 0, 0, 0,
+            1, 0, 0, 0,
+            0, 0, 0, 0,
+            4, 0
+          ]
+        },
+        {"id": 11, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 12, "command": "service_rx", "service_data": [4, 2]},
+      "expect": [
+        {
+          "id": 12,
+          "type": "service_tx",
+          "data": [132, 0, 2, 88, 2, 0, 0, 2, 1, 0, 0, 0]
+        },
+        {"id": 12, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 13, "command": "service_rx", "service_data": [4, 3]},
+      "expect": [
+        {
+          "id": 13,
+          "type": "service_tx",
+          "data": [132, 0, 3, 88, 2, 0, 0, 3, 127, 0, 0, 0]
+        },
+        {"id": 13, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 14, "command": "service_rx", "service_data": [126]},
+      "expect": [
+        {"id": 14, "type": "service_tx", "data": [255, 2]},
+        {"id": 14, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 15, "command": "service_rx", "service_data": [3]},
+      "expect": [
+        {
+          "id": 15,
+          "type": "service_tx",
+          "data": [
+            131, 0,
+            2, 0, 0, 0,
+            1, 0, 0, 0,
+            1, 0, 0, 0,
+            1, 0, 0, 0,
+            2, 0, 0, 0,
+            1, 0, 0, 0,
+            4, 0
+          ]
+        },
+        {"id": 15, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 16, "command": "service_rx", "service_data": [4, 0]},
+      "expect": [
+        {
+          "id": 16,
+          "type": "service_tx",
+          "data": [132, 0, 0, 88, 2, 0, 0, 4, 88, 2, 0, 0]
+        },
+        {"id": 16, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 17, "command": "advance", "milliseconds": 100},
+      "expect": [
+        {
+          "id": 17,
+          "type": "state",
+          "full": false,
+          "state": {"timestamp_ms": 700, "revision": 3}
+        },
+        {"id": 17, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 18, "command": "service_rx", "service_data": [3]},
+      "expect": [
+        {
+          "id": 18,
+          "type": "service_tx",
+          "data": [
+            131, 0,
+            3, 0, 0, 0,
+            1, 0, 0, 0,
+            1, 0, 0, 0,
+            1, 0, 0, 0,
+            2, 0, 0, 0,
+            1, 0, 0, 0,
+            4, 1
+          ]
+        },
+        {"id": 18, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 19, "command": "shutdown"},
+      "expect": [{"id": 19, "type": "done"}]
+    }
+  ]
+}
