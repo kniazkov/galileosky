@@ -223,6 +223,22 @@ void reset()
     active_configuration = {};
 }
 
+bool set_geofences_enabled(
+    const std::uint32_t timestamp_ms,
+    const bool enabled)
+{
+    if (active_configuration.geofences_enabled == enabled) {
+        return false;
+    }
+
+    active_configuration.geofences_enabled = enabled;
+    ++active_configuration.revision;
+    modules::diagnostics::record_configuration_update(
+        timestamp_ms,
+        active_configuration.revision);
+    return true;
+}
+
 bool tick(const std::uint32_t timestamp_ms)
 {
     drivers::service_port::Frame request{};

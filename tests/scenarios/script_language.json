@@ -1,0 +1,170 @@
+{
+  "name": "Конструкции BASIC и встроенные переменные",
+  "steps": [
+    {
+      "send": {
+        "id": 1,
+        "command": "script_load",
+        "program": "A = 10\nB = 3\nIF A + B * 2 = 16 THEN\n  IF GEOFENCE = 1 THEN\n    GEOFENCE = 0\n    LOGCODE = 77\n    SEND((A - B) / 2)\n  ELSE\n    SEND(999)\n  END IF\nELSE\n  SEND(998)\nEND IF"
+      },
+      "expect": [
+        {
+          "id": 1,
+          "type": "state",
+          "full": false,
+          "state": {
+            "timestamp_ms": 0,
+            "revision": 1,
+            "server_transmission": {
+              "queued_messages": 1,
+              "dropped_messages": 0,
+              "sent_messages": 0,
+              "revision": 1
+            }
+          }
+        },
+        {
+          "id": 1,
+          "type": "script_state",
+          "loaded": true,
+          "faulted": false,
+          "error": 0,
+          "error_line": 0,
+          "program_size": 168,
+          "variables": 2,
+          "executions": 1,
+          "sent_messages": 1,
+          "revision": 2
+        },
+        {"id": 1, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 2, "command": "service_rx", "service_data": [1]},
+      "expect": [
+        {
+          "id": 2,
+          "type": "service_tx",
+          "data": [129, 0, 0, 232, 3, 0, 0]
+        },
+        {"id": 2, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 3, "command": "service_rx", "service_data": [4, 0]},
+      "expect": [
+        {
+          "id": 3,
+          "type": "service_tx",
+          "data": [132, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0]
+        },
+        {"id": 3, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 4, "command": "service_rx", "service_data": [4, 1]},
+      "expect": [
+        {
+          "id": 4,
+          "type": "service_tx",
+          "data": [132, 0, 1, 0, 0, 0, 0, 5, 77, 0, 0, 0]
+        },
+        {"id": 4, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 5, "command": "server_online", "online": true},
+      "expect": [
+        {
+          "id": 5,
+          "type": "state",
+          "full": false,
+          "state": {
+            "server_transmission": {
+              "queued_messages": 0,
+              "dropped_messages": 0,
+              "sent_messages": 1,
+              "revision": 2
+            }
+          }
+        },
+        {
+          "id": 5,
+          "type": "server_tx",
+          "message_id": 1,
+          "payload": [32, 3, 0, 0, 0]
+        },
+        {"id": 5, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 6, "command": "script_snapshot"},
+      "expect": [
+        {
+          "id": 6,
+          "type": "script_state",
+          "loaded": true,
+          "faulted": false,
+          "error": 0,
+          "error_line": 0,
+          "program_size": 168,
+          "variables": 2,
+          "executions": 1,
+          "sent_messages": 1,
+          "revision": 2
+        },
+        {"id": 6, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 7,
+        "command": "script_load",
+        "program": "SPEED = 10"
+      },
+      "expect": [
+        {
+          "id": 7,
+          "type": "script_state",
+          "loaded": false,
+          "faulted": true,
+          "error": 6,
+          "error_line": 1,
+          "program_size": 10,
+          "variables": 0,
+          "executions": 0,
+          "sent_messages": 0,
+          "revision": 1
+        },
+        {"id": 7, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 8,
+        "command": "script_load",
+        "program": "A = 1 / 0"
+      },
+      "expect": [
+        {
+          "id": 8,
+          "type": "script_state",
+          "loaded": true,
+          "faulted": true,
+          "error": 7,
+          "error_line": 1,
+          "program_size": 9,
+          "variables": 1,
+          "executions": 1,
+          "sent_messages": 0,
+          "revision": 2
+        },
+        {"id": 8, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 9, "command": "shutdown"},
+      "expect": [{"id": 9, "type": "done"}]
+    }
+  ]
+}

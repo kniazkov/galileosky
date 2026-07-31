@@ -132,6 +132,16 @@ void record_protocol_error(
         command);
 }
 
+void record_script_value(
+    const std::uint32_t timestamp_ms,
+    const std::uint32_t value)
+{
+    append_log(
+        timestamp_ms,
+        LogCode::script_value,
+        value);
+}
+
 Snapshot snapshot()
 {
     return state.snapshot;

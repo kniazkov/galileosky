@@ -15,6 +15,7 @@
 #include "drivers/server_transport.hpp"
 #include "drivers/sensors.hpp"
 #include "modules/power_management.hpp"
+#include "modules/script.hpp"
 #include "modules/server_transmission.hpp"
 #include "platform/desktop/can_adapter.hpp"
 #include "platform/desktop/gnss_adapter.hpp"
@@ -51,6 +52,8 @@ enum class Command {
     server_enqueue,
     server_online,
     power_snapshot,
+    script_load,
+    script_snapshot,
     snapshot,
     reset,
     shutdown
@@ -71,6 +74,7 @@ struct Request {
     bool sensor_active;
     drivers::gnss::Fix gnss_fix;
     drivers::service_port::Frame service_frame;
+    std::string script_program{};
 };
 
 /**
@@ -359,6 +363,12 @@ Command parse_command(const std::string& value)
     if (value == "power_snapshot") {
         return Command::power_snapshot;
     }
+    if (value == "script_load") {
+        return Command::script_load;
+    }
+    if (value == "script_snapshot") {
+        return Command::script_snapshot;
+    }
     if (value == "snapshot") {
         return Command::snapshot;
     }
@@ -387,6 +397,7 @@ Request parse_request(const std::string& line)
     bool sensor_active = false;
     drivers::gnss::Fix gnss_fix{};
     drivers::service_port::Frame service_frame{};
+    std::string script_program;
     std::string command_text;
     bool has_id = false;
     bool has_command = false;
@@ -405,6 +416,7 @@ Request parse_request(const std::string& line)
     bool has_ground_speed = false;
     bool has_fix_valid = false;
     bool has_service_data = false;
+    bool has_script_program = false;
 
     if (!reader.consume('}')) {
         for (;;) {
@@ -539,6 +551,13 @@ Request parse_request(const std::string& line)
                 service_frame.length =
                     reader.read_byte_array(service_frame.data);
                 has_service_data = true;
+            } else if (key == "program") {
+                if (has_script_program) {
+                    throw ProtocolError{
+                        "поле program указано несколько раз"};
+                }
+                script_program = reader.read_string();
+                has_script_program = true;
             } else {
                 throw ProtocolError{"неизвестное поле команды"};
             }
@@ -565,7 +584,7 @@ Request parse_request(const std::string& line)
     case Command::tick:
         if (!has_timestamp || has_milliseconds || has_can_id || has_can_data
             || has_server_message || has_server_online || has_sensor_fields
-            || has_gnss_fields || has_service_data) {
+            || has_gnss_fields || has_service_data || has_script_program) {
             throw ProtocolError{"команде tick требуется только timestamp_ms"};
         }
         return Request{
@@ -573,7 +592,7 @@ Request parse_request(const std::string& line)
     case Command::advance:
         if (!has_milliseconds || has_timestamp || has_can_id || has_can_data
             || has_server_message || has_server_online || has_sensor_fields
-            || has_gnss_fields || has_service_data) {
+            || has_gnss_fields || has_service_data || has_script_program) {
             throw ProtocolError{"команде advance требуется только milliseconds"};
         }
         return Request{
@@ -581,7 +600,7 @@ Request parse_request(const std::string& line)
     case Command::can_rx:
         if (has_timestamp || has_milliseconds || !has_can_id || !has_can_data
             || has_server_message || has_server_online || has_sensor_fields
-            || has_gnss_fields || has_service_data) {
+            || has_gnss_fields || has_service_data || has_script_program) {
             throw ProtocolError{"команде can_rx требуются can_id и data"};
         }
         return Request{
@@ -590,7 +609,8 @@ Request parse_request(const std::string& line)
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
             || has_server_message || has_server_online
             || !has_sensor_channel || !has_sensor_value || has_sensor_active
-            || sensor_channel > 1U || has_gnss_fields || has_service_data) {
+            || sensor_channel > 1U || has_gnss_fields || has_service_data
+            || has_script_program) {
             throw ProtocolError{
                 "команде adc_set требуются channel 0..1 и adc_value"};
         }
@@ -610,7 +630,8 @@ Request parse_request(const std::string& line)
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
             || has_server_message || has_server_online
             || !has_sensor_channel || has_sensor_value || !has_sensor_active
-            || sensor_channel > 2U || has_gnss_fields || has_service_data) {
+            || sensor_channel > 2U || has_gnss_fields || has_service_data
+            || has_script_program) {
             throw ProtocolError{
                 "команде digital_set требуются channel 0..2 и active"};
         }
@@ -630,6 +651,7 @@ Request parse_request(const std::string& line)
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
             || has_server_message || has_server_online || has_sensor_fields
             || has_service_data || !has_fix_valid
+            || has_script_program
             || (gnss_fix.valid
                 && (!has_latitude || !has_longitude || !has_ground_speed))
             || (!gnss_fix.valid
@@ -653,7 +675,7 @@ Request parse_request(const std::string& line)
     case Command::service_rx:
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
             || has_server_message || has_server_online || has_sensor_fields
-            || has_gnss_fields || !has_service_data) {
+            || has_gnss_fields || !has_service_data || has_script_program) {
             throw ProtocolError{
                 "команде service_rx требуется только service_data"};
         }
@@ -672,7 +694,8 @@ Request parse_request(const std::string& line)
     case Command::server_enqueue:
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
             || !has_message_id || !has_payload || has_server_online
-            || has_sensor_fields || has_gnss_fields || has_service_data) {
+            || has_sensor_fields || has_gnss_fields || has_service_data
+            || has_script_program) {
             throw ProtocolError{
                 "команде server_enqueue требуются message_id и payload"};
         }
@@ -691,7 +714,7 @@ Request parse_request(const std::string& line)
     case Command::server_online:
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
             || has_server_message || !has_server_online || has_sensor_fields
-            || has_gnss_fields || has_service_data) {
+            || has_gnss_fields || has_service_data || has_script_program) {
             throw ProtocolError{"команде server_online требуется поле online"};
         }
         return Request{
@@ -706,13 +729,34 @@ Request parse_request(const std::string& line)
             false,
             {},
             {}};
+    case Command::script_load:
+        if (has_timestamp || has_milliseconds || has_can_id || has_can_data
+            || has_server_message || has_server_online || has_sensor_fields
+            || has_gnss_fields || has_service_data || !has_script_program) {
+            throw ProtocolError{
+                "команде script_load требуется только поле program"};
+        }
+        return Request{
+            id,
+            command,
+            0U,
+            {},
+            {},
+            false,
+            0U,
+            0U,
+            false,
+            {},
+            {},
+            script_program};
     case Command::power_snapshot:
+    case Command::script_snapshot:
     case Command::snapshot:
     case Command::reset:
     case Command::shutdown:
         if (has_timestamp || has_milliseconds || has_can_id || has_can_data
             || has_server_message || has_server_online || has_sensor_fields
-            || has_gnss_fields || has_service_data) {
+            || has_gnss_fields || has_service_data || has_script_program) {
             throw ProtocolError{"команда не принимает дополнительные поля"};
         }
         return Request{
@@ -1046,6 +1090,31 @@ void send_power_state(const std::uint64_t id)
         << '}' << std::endl;
 }
 
+/**
+ * @brief Выдаёт состояние BASIC-интерпретатора отдельным сообщением.
+ */
+void send_script_state(const std::uint64_t id)
+{
+    const modules::script::Snapshot script =
+        modules::script::snapshot();
+    std::cout
+        << "{\"id\":" << id
+        << ",\"type\":\"script_state\",\"loaded\":"
+        << (script.loaded ? "true" : "false")
+        << ",\"faulted\":"
+        << (script.faulted ? "true" : "false")
+        << ",\"error\":"
+        << static_cast<unsigned int>(script.error)
+        << ",\"error_line\":" << script.error_line
+        << ",\"program_size\":" << script.program_size
+        << ",\"variables\":"
+        << static_cast<unsigned int>(script.variables)
+        << ",\"executions\":" << script.executions
+        << ",\"sent_messages\":" << script.sent_messages
+        << ",\"revision\":" << script.revision
+        << '}' << std::endl;
+}
+
 void send_done(const std::uint64_t id)
 {
     std::cout
@@ -1179,6 +1248,21 @@ int run_application()
                 break;
             case Command::power_snapshot:
                 send_power_state(request.id);
+                send_done(request.id);
+                break;
+            case Command::script_load:
+                (void)modules::script::load(
+                    request.script_program.data(),
+                    request.script_program.size());
+                run_until_stable(virtual_timestamp_ms);
+                reporter.send_state(request.id, false);
+                send_can_frames(request.id);
+                send_server_messages(request.id);
+                send_script_state(request.id);
+                send_done(request.id);
+                break;
+            case Command::script_snapshot:
+                send_script_state(request.id);
                 send_done(request.id);
                 break;
             case Command::snapshot:

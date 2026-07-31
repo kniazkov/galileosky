@@ -23,6 +23,7 @@ add_executable(${PROJECT_NAME}
     src/obd2.cpp
     src/power_management.cpp
     src/sensor_events.cpp
+    src/script.cpp
     src/service_port.cpp
     src/server_transmission.cpp
     src/server_transport.cpp
@@ -123,6 +124,9 @@ elseif(GALILEOSKY_PLATFORM STREQUAL "stm32g030")
         -mcpu=cortex-m0plus
         -mthumb
         -nostdlib
+        # Часть служебных объектов libgcc не содержит .note.GNU-stack.
+        # Явно запрещаем исполняемый стек, не отключая строгие предупреждения.
+        -Wl,-z,noexecstack
         -Wl,--gc-sections
         -Wl,--fatal-warnings
         -Wl,--print-memory-usage

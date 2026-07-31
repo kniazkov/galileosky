@@ -22,6 +22,7 @@
 #include "modules/navigation.hpp"
 #include "modules/power_management.hpp"
 #include "modules/sensor_events.hpp"
+#include "modules/script.hpp"
 #include "modules/server_transmission.hpp"
 #include "modules/sensors.hpp"
 #include "modules/vehicle.hpp"
@@ -59,6 +60,7 @@ void reset()
     modules::navigation::reset();
     modules::power_management::reset();
     modules::sensor_events::reset();
+    modules::script::reset();
     modules::server_transmission::reset();
     modules::sensors::reset();
     modules::vehicle::reset();
@@ -84,11 +86,12 @@ TickResult tick(const std::uint32_t timestamp_ms)
     const modules::power_management::Snapshot power =
         modules::power_management::snapshot();
     modules::navigation::tick(timestamp_ms, power.gnss_enabled);
+    modules::sensors::tick(timestamp_ms);
+    modules::script::tick(timestamp_ms);
     modules::geofences::tick(
         timestamp_ms,
         modules::navigation::snapshot(),
         configuration.geofences_enabled);
-    modules::sensors::tick(timestamp_ms);
     modules::sensor_events::tick(timestamp_ms, modules::sensors::snapshot());
     const bool service_pending =
         modules::configuration::tick(timestamp_ms);
