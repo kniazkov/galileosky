@@ -13,7 +13,7 @@
 namespace modules::sensors {
 
 constexpr std::uint8_t supply_voltage_valid = 1U << 0U;
-constexpr std::uint8_t fuel_level_valid = 1U << 1U;
+constexpr std::uint8_t external_input_valid = 1U << 1U;
 constexpr std::uint8_t ignition_valid = 1U << 2U;
 constexpr std::uint8_t door_open_valid = 1U << 3U;
 constexpr std::uint8_t alarm_valid = 1U << 4U;
@@ -23,7 +23,7 @@ constexpr std::uint8_t alarm_valid = 1U << 4U;
  */
 struct Snapshot {
     std::uint16_t supply_voltage_adc{};
-    std::uint16_t fuel_level_adc{};
+    std::uint16_t external_input_adc{};
     bool ignition{};
     bool door_open{};
     bool alarm{};

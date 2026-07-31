@@ -667,8 +667,8 @@ public:
                 << "\"sensors\":{"
                 << "\"supply_voltage_adc\":"
                 << state.sensors.supply_voltage_adc
-                << ",\"fuel_level_adc\":"
-                << state.sensors.fuel_level_adc
+                << ",\"external_input_adc\":"
+                << state.sensors.external_input_adc
                 << ",\"ignition\":"
                 << (state.sensors.ignition ? "true" : "false")
                 << ",\"door_open\":"

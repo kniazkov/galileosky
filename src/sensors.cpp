@@ -50,12 +50,12 @@ void poll()
             supply_voltage_valid) || changed;
     }
     if (drivers::sensors::read_analog(
-            drivers::sensors::AnalogChannel::fuel_level,
+            drivers::sensors::AnalogChannel::external_input,
             analog_value)) {
         changed = update_value(
-            state.snapshot.fuel_level_adc,
+            state.snapshot.external_input_adc,
             analog_value,
-            fuel_level_valid) || changed;
+            external_input_valid) || changed;
     }
 
     bool digital_value = false;

@@ -45,7 +45,7 @@
             "revision": 2,
             "sensors": {
               "supply_voltage_adc": 1000,
-              "fuel_level_adc": 2000,
+              "external_input_adc": 2000,
               "ignition": false,
               "door_open": false,
               "alarm": false,
@@ -77,7 +77,7 @@
             "revision": 3,
             "sensors": {
               "supply_voltage_adc": 1500,
-              "fuel_level_adc": 2000,
+              "external_input_adc": 2000,
               "ignition": false,
               "door_open": true,
               "alarm": false,
@@ -127,7 +127,7 @@
             "revision": 5,
             "sensors": {
               "supply_voltage_adc": 1500,
-              "fuel_level_adc": 2000,
+              "external_input_adc": 2000,
               "ignition": false,
               "door_open": false,
               "alarm": false,
@@ -163,7 +163,7 @@
             "revision": 6,
             "sensors": {
               "supply_voltage_adc": 1500,
-              "fuel_level_adc": 2000,
+              "external_input_adc": 2000,
               "ignition": true,
               "door_open": true,
               "alarm": true,

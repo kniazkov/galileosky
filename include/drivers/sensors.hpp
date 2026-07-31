@@ -19,7 +19,7 @@ constexpr std::uint16_t maximum_adc_value = 4'095U;
  */
 enum class AnalogChannel : std::uint8_t {
     supply_voltage,
-    fuel_level
+    external_input
 };
 
 /**

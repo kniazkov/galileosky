@@ -22,7 +22,7 @@
             },
             "sensors": {
               "supply_voltage_adc": 0,
-              "fuel_level_adc": 0,
+              "external_input_adc": 0,
               "ignition": false,
               "door_open": false,
               "alarm": false,
@@ -91,7 +91,7 @@
             },
             "sensors": {
               "supply_voltage_adc": 0,
-              "fuel_level_adc": 0,
+              "external_input_adc": 0,
               "ignition": false,
               "door_open": false,
               "alarm": false,
