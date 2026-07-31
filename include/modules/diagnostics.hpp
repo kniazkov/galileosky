@@ -21,7 +21,8 @@ enum class LogCode : std::uint8_t {
     configuration_changed = 1U,
     configuration_rejected = 2U,
     service_protocol_error = 3U,
-    watchdog_timeout = 4U
+    watchdog_timeout = 4U,
+    script_value = 5U
 };
 
 /**
@@ -78,6 +79,13 @@ void record_configuration_rejection(
 void record_protocol_error(
     std::uint32_t timestamp_ms,
     std::uint32_t command);
+
+/**
+ * @brief Записывает пользовательское числовое значение из BASIC-скрипта.
+ */
+void record_script_value(
+    std::uint32_t timestamp_ms,
+    std::uint32_t value);
 
 /**
  * @brief Возвращает текущие диагностические счётчики.

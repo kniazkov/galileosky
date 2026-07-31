@@ -23,6 +23,7 @@ add_executable(${PROJECT_NAME}
     src/obd2.cpp
     src/power_management.cpp
     src/sensor_events.cpp
+    src/script.cpp
     src/service_port.cpp
     src/server_transmission.cpp
     src/server_transport.cpp

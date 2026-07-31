@@ -3,8 +3,8 @@ ENTRY(Reset_Handler)
 MEMORY
 {
     FLASH      (rx)  : ORIGIN = 0x08000000, LENGTH = 32K
-    RAM_STATIC (rwx) : ORIGIN = 0x20000000, LENGTH = 7K
-    RAM_STACK  (rw)  : ORIGIN = 0x20001C00, LENGTH = 1K
+    RAM_STATIC (rwx) : ORIGIN = 0x20000000, LENGTH = 6K
+    RAM_STACK  (rw)  : ORIGIN = 0x20001800, LENGTH = 2K
 }
 
 _stack_limit = ORIGIN(RAM_STACK);
@@ -119,4 +119,4 @@ SECTIONS
 }
 
 ASSERT(_static_data_end <= ORIGIN(RAM_STATIC) + LENGTH(RAM_STATIC),
-       "RAM overflow: static data exceeds its 7 KiB region")
+       "RAM overflow: static data exceeds its 6 KiB region")

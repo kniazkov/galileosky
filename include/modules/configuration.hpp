@@ -31,6 +31,14 @@ struct Snapshot {
 void reset();
 
 /**
+ * @brief Изменяет состояние геозон из внутреннего прикладного модуля.
+ * @return true, если активное значение изменилось.
+ */
+bool set_geofences_enabled(
+    std::uint32_t timestamp_ms,
+    bool enabled);
+
+/**
  * @brief Обрабатывает один сервисный запрос.
  * @return true, если запрос был обработан и возможна следующая работа.
  */
