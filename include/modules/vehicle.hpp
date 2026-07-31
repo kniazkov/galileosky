@@ -23,6 +23,7 @@ constexpr std::uint8_t check_engine_valid = 1U << 4U;
  */
 struct Snapshot {
     std::uint16_t engine_speed_rpm{};
+    std::uint32_t engine_speed_timestamp_ms{};
     std::uint8_t vehicle_speed_kmh{};
     std::int16_t coolant_temperature_c{};
     std::uint8_t fuel_level_percent{};

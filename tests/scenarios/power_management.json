@@ -1,0 +1,470 @@
+{
+  "name": "Управление питанием GPS/ГЛОНАСС",
+  "steps": [
+    {
+      "send": {"id": 1, "command": "tick", "timestamp_ms": 0},
+      "expect": [
+        {
+          "id": 1,
+          "type": "state",
+          "full": false,
+          "state": {"timestamp_ms": 0, "revision": 1}
+        },
+        {"id": 1, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 2, "command": "power_snapshot"},
+      "expect": [
+        {
+          "id": 2,
+          "type": "power_state",
+          "gnss_enabled": true,
+          "engine_running": false,
+          "mode": "periodic_fix",
+          "transitions": 1,
+          "revision": 1
+        },
+        {"id": 2, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 3, "command": "advance", "milliseconds": 10000},
+      "expect": [
+        {
+          "id": 3,
+          "type": "state",
+          "full": false,
+          "state": {"timestamp_ms": 10000, "revision": 2}
+        },
+        {
+          "id": 3,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 12, 0, 0, 0, 0, 0]
+        },
+        {
+          "id": 3,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 13, 0, 0, 0, 0, 0]
+        },
+        {
+          "id": 3,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 5, 0, 0, 0, 0, 0]
+        },
+        {
+          "id": 3,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 47, 0, 0, 0, 0, 0]
+        },
+        {
+          "id": 3,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 1, 0, 0, 0, 0, 0]
+        },
+        {"id": 3, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 4, "command": "power_snapshot"},
+      "expect": [
+        {
+          "id": 4,
+          "type": "power_state",
+          "gnss_enabled": false,
+          "engine_running": false,
+          "mode": "sleeping",
+          "transitions": 2,
+          "revision": 2
+        },
+        {"id": 4, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 5,
+        "command": "gnss_set",
+        "valid": true,
+        "latitude_e7": 580050000,
+        "longitude_e7": 560050000,
+        "ground_speed_centi_kph": 1200
+      },
+      "expect": [{"id": 5, "type": "done"}]
+    },
+    {
+      "send": {"id": 6, "command": "advance", "milliseconds": 59999},
+      "expect": [
+        {
+          "id": 6,
+          "type": "state",
+          "full": false,
+          "state": {"timestamp_ms": 69999, "revision": 3}
+        },
+        {
+          "id": 6,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 12, 0, 0, 0, 0, 0]
+        },
+        {
+          "id": 6,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 13, 0, 0, 0, 0, 0]
+        },
+        {
+          "id": 6,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 5, 0, 0, 0, 0, 0]
+        },
+        {
+          "id": 6,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 47, 0, 0, 0, 0, 0]
+        },
+        {
+          "id": 6,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 1, 0, 0, 0, 0, 0]
+        },
+        {"id": 6, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 7, "command": "power_snapshot"},
+      "expect": [
+        {
+          "id": 7,
+          "type": "power_state",
+          "gnss_enabled": false,
+          "engine_running": false,
+          "mode": "sleeping",
+          "transitions": 2,
+          "revision": 2
+        },
+        {"id": 7, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 8, "command": "advance", "milliseconds": 1},
+      "expect": [
+        {
+          "id": 8,
+          "type": "state",
+          "full": false,
+          "state": {
+            "timestamp_ms": 70000,
+            "revision": 4,
+            "navigation": {
+              "latitude_e7": 580050000,
+              "longitude_e7": 560050000,
+              "ground_speed_centi_kph": 1200,
+              "fix_valid": true,
+              "revision": 1
+            },
+            "geofences": {
+              "inside_mask": 1,
+              "position_valid": true,
+              "revision": 1
+            }
+          }
+        },
+        {"id": 8, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 9, "command": "power_snapshot"},
+      "expect": [
+        {
+          "id": 9,
+          "type": "power_state",
+          "gnss_enabled": true,
+          "engine_running": false,
+          "mode": "periodic_fix",
+          "transitions": 3,
+          "revision": 3
+        },
+        {"id": 9, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 10,
+        "command": "can_rx",
+        "can_id": 2024,
+        "data": [4, 65, 12, 26, 248, 0, 0, 0]
+      },
+      "expect": [
+        {
+          "id": 10,
+          "type": "state",
+          "full": false,
+          "state": {
+            "vehicle": {
+              "engine_speed_rpm": 1726,
+              "vehicle_speed_kmh": 0,
+              "coolant_temperature_c": 0,
+              "fuel_level_percent": 0,
+              "check_engine": false,
+              "valid_mask": 1,
+              "revision": 1
+            }
+          }
+        },
+        {"id": 10, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 11, "command": "power_snapshot"},
+      "expect": [
+        {
+          "id": 11,
+          "type": "power_state",
+          "gnss_enabled": true,
+          "engine_running": true,
+          "mode": "engine_running",
+          "transitions": 3,
+          "revision": 4
+        },
+        {"id": 11, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 12, "command": "advance", "milliseconds": 5001},
+      "expect": [
+        {
+          "id": 12,
+          "type": "state",
+          "full": false,
+          "state": {"timestamp_ms": 75001, "revision": 5}
+        },
+        {
+          "id": 12,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 12, 0, 0, 0, 0, 0]
+        },
+        {
+          "id": 12,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 13, 0, 0, 0, 0, 0]
+        },
+        {
+          "id": 12,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 5, 0, 0, 0, 0, 0]
+        },
+        {
+          "id": 12,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 47, 0, 0, 0, 0, 0]
+        },
+        {
+          "id": 12,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 1, 0, 0, 0, 0, 0]
+        },
+        {"id": 12, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 13, "command": "power_snapshot"},
+      "expect": [
+        {
+          "id": 13,
+          "type": "power_state",
+          "gnss_enabled": true,
+          "engine_running": false,
+          "mode": "periodic_fix",
+          "transitions": 3,
+          "revision": 5
+        },
+        {"id": 13, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 14,
+        "command": "can_rx",
+        "can_id": 2024,
+        "data": [4, 65, 12, 0, 0, 0, 0, 0]
+      },
+      "expect": [
+        {
+          "id": 14,
+          "type": "state",
+          "full": false,
+          "state": {
+            "vehicle": {
+              "engine_speed_rpm": 0,
+              "vehicle_speed_kmh": 0,
+              "coolant_temperature_c": 0,
+              "fuel_level_percent": 0,
+              "check_engine": false,
+              "valid_mask": 1,
+              "revision": 2
+            }
+          }
+        },
+        {"id": 14, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 15, "command": "power_snapshot"},
+      "expect": [
+        {
+          "id": 15,
+          "type": "power_state",
+          "gnss_enabled": true,
+          "engine_running": false,
+          "mode": "periodic_fix",
+          "transitions": 3,
+          "revision": 5
+        },
+        {"id": 15, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 16, "command": "advance", "milliseconds": 10000},
+      "expect": [
+        {
+          "id": 16,
+          "type": "state",
+          "full": false,
+          "state": {
+            "timestamp_ms": 85001,
+            "revision": 6,
+            "navigation": {
+              "latitude_e7": 0,
+              "longitude_e7": 0,
+              "ground_speed_centi_kph": 0,
+              "fix_valid": false,
+              "revision": 2
+            },
+            "geofences": {
+              "inside_mask": 1,
+              "position_valid": false,
+              "revision": 2
+            }
+          }
+        },
+        {
+          "id": 16,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 12, 0, 0, 0, 0, 0]
+        },
+        {
+          "id": 16,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 13, 0, 0, 0, 0, 0]
+        },
+        {
+          "id": 16,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 5, 0, 0, 0, 0, 0]
+        },
+        {
+          "id": 16,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 47, 0, 0, 0, 0, 0]
+        },
+        {
+          "id": 16,
+          "type": "can_tx",
+          "can_id": 2015,
+          "data": [2, 1, 1, 0, 0, 0, 0, 0]
+        },
+        {"id": 16, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 17, "command": "power_snapshot"},
+      "expect": [
+        {
+          "id": 17,
+          "type": "power_state",
+          "gnss_enabled": false,
+          "engine_running": false,
+          "mode": "sleeping",
+          "transitions": 4,
+          "revision": 6
+        },
+        {"id": 17, "type": "done"}
+      ]
+    },
+    {
+      "send": {
+        "id": 18,
+        "command": "can_rx",
+        "can_id": 2024,
+        "data": [4, 65, 12, 26, 248, 0, 0, 0]
+      },
+      "expect": [
+        {
+          "id": 18,
+          "type": "state",
+          "full": false,
+          "state": {
+            "vehicle": {
+              "engine_speed_rpm": 1726,
+              "vehicle_speed_kmh": 0,
+              "coolant_temperature_c": 0,
+              "fuel_level_percent": 0,
+              "check_engine": false,
+              "valid_mask": 1,
+              "revision": 3
+            },
+            "navigation": {
+              "latitude_e7": 580050000,
+              "longitude_e7": 560050000,
+              "ground_speed_centi_kph": 1200,
+              "fix_valid": true,
+              "revision": 3
+            },
+            "geofences": {
+              "inside_mask": 1,
+              "position_valid": true,
+              "revision": 3
+            }
+          }
+        },
+        {"id": 18, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 19, "command": "power_snapshot"},
+      "expect": [
+        {
+          "id": 19,
+          "type": "power_state",
+          "gnss_enabled": true,
+          "engine_running": true,
+          "mode": "engine_running",
+          "transitions": 5,
+          "revision": 7
+        },
+        {"id": 19, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 20, "command": "shutdown"},
+      "expect": [{"id": 20, "type": "done"}]
+    }
+  ]
+}

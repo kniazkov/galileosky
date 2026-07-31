@@ -14,6 +14,7 @@
 #include "drivers/service_port.hpp"
 #include "drivers/server_transport.hpp"
 #include "drivers/sensors.hpp"
+#include "modules/power_management.hpp"
 #include "modules/server_transmission.hpp"
 #include "platform/desktop/can_adapter.hpp"
 #include "platform/desktop/gnss_adapter.hpp"
@@ -49,6 +50,7 @@ enum class Command {
     service_rx,
     server_enqueue,
     server_online,
+    power_snapshot,
     snapshot,
     reset,
     shutdown
@@ -353,6 +355,9 @@ Command parse_command(const std::string& value)
     }
     if (value == "server_online") {
         return Command::server_online;
+    }
+    if (value == "power_snapshot") {
+        return Command::power_snapshot;
     }
     if (value == "snapshot") {
         return Command::snapshot;
@@ -701,6 +706,7 @@ Request parse_request(const std::string& line)
             false,
             {},
             {}};
+    case Command::power_snapshot:
     case Command::snapshot:
     case Command::reset:
     case Command::shutdown:
@@ -1002,6 +1008,44 @@ void send_service_frames(const std::uint64_t id)
     }
 }
 
+/**
+ * @brief Возвращает стабильное имя режима для JSON-протокола.
+ */
+const char* power_mode_name(const modules::power_management::Mode mode)
+{
+    using modules::power_management::Mode;
+
+    switch (mode) {
+    case Mode::engine_running:
+        return "engine_running";
+    case Mode::periodic_fix:
+        return "periodic_fix";
+    case Mode::sleeping:
+        return "sleeping";
+    }
+
+    return "unknown";
+}
+
+/**
+ * @brief Выдаёт полный снимок политики питания отдельным сообщением.
+ */
+void send_power_state(const std::uint64_t id)
+{
+    const modules::power_management::Snapshot power =
+        modules::power_management::snapshot();
+    std::cout
+        << "{\"id\":" << id
+        << ",\"type\":\"power_state\",\"gnss_enabled\":"
+        << (power.gnss_enabled ? "true" : "false")
+        << ",\"engine_running\":"
+        << (power.engine_running ? "true" : "false")
+        << ",\"mode\":\"" << power_mode_name(power.mode)
+        << "\",\"transitions\":" << power.transitions
+        << ",\"revision\":" << power.revision
+        << '}' << std::endl;
+}
+
 void send_done(const std::uint64_t id)
 {
     std::cout
@@ -1131,6 +1175,10 @@ int run_application()
                 run_until_stable(virtual_timestamp_ms);
                 reporter.send_state(request.id, false);
                 send_server_messages(request.id);
+                send_done(request.id);
+                break;
+            case Command::power_snapshot:
+                send_power_state(request.id);
                 send_done(request.id);
                 break;
             case Command::snapshot:

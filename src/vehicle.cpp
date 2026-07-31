@@ -48,7 +48,9 @@ bool update_value(
     return changed;
 }
 
-void apply(const protocol::obd2::DecodedParameter& decoded)
+void apply(
+    const protocol::obd2::DecodedParameter& decoded,
+    const std::uint32_t timestamp_ms)
 {
     using protocol::obd2::Parameter;
     using namespace modules::vehicle;
@@ -56,6 +58,7 @@ void apply(const protocol::obd2::DecodedParameter& decoded)
     bool changed = false;
     switch (decoded.parameter) {
     case Parameter::engine_speed:
+        state.snapshot.engine_speed_timestamp_ms = timestamp_ms;
         changed = update_value(
             state.snapshot.engine_speed_rpm,
             static_cast<std::uint16_t>(decoded.value),
@@ -92,13 +95,13 @@ void apply(const protocol::obd2::DecodedParameter& decoded)
     }
 }
 
-void process_received_frames()
+void process_received_frames(const std::uint32_t timestamp_ms)
 {
     drivers::can::Frame frame{};
     while (drivers::can::receive(frame)) {
         protocol::obd2::DecodedParameter decoded{};
         if (protocol::obd2::decode(frame, decoded)) {
-            apply(decoded);
+            apply(decoded, timestamp_ms);
         }
     }
 }
@@ -133,7 +136,7 @@ void reset()
 
 void tick(const std::uint32_t timestamp_ms)
 {
-    process_received_frames();
+    process_received_frames(timestamp_ms);
     poll_if_due(timestamp_ms);
 }
 

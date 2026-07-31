@@ -11,6 +11,7 @@
 
 #include "drivers/can.hpp"
 #include "drivers/gnss.hpp"
+#include "drivers/power.hpp"
 #include "drivers/service_port.hpp"
 #include "drivers/server_transport.hpp"
 #include "drivers/sensors.hpp"
@@ -19,6 +20,7 @@
 #include "modules/event_messages.hpp"
 #include "modules/geofences.hpp"
 #include "modules/navigation.hpp"
+#include "modules/power_management.hpp"
 #include "modules/sensor_events.hpp"
 #include "modules/server_transmission.hpp"
 #include "modules/sensors.hpp"
@@ -46,6 +48,7 @@ void reset()
     state = {};
     drivers::can::reset();
     drivers::gnss::reset();
+    drivers::power::reset();
     drivers::service_port::reset();
     drivers::server_transport::reset();
     drivers::sensors::reset();
@@ -54,6 +57,7 @@ void reset()
     modules::event_messages::reset();
     modules::geofences::reset();
     modules::navigation::reset();
+    modules::power_management::reset();
     modules::sensor_events::reset();
     modules::server_transmission::reset();
     modules::sensors::reset();
@@ -74,7 +78,12 @@ TickResult tick(const std::uint32_t timestamp_ms)
         timestamp_ms,
         configuration.watchdog_timeout_ms);
     modules::vehicle::tick(timestamp_ms);
-    modules::navigation::tick(timestamp_ms);
+    modules::power_management::tick(
+        timestamp_ms,
+        modules::vehicle::snapshot());
+    const modules::power_management::Snapshot power =
+        modules::power_management::snapshot();
+    modules::navigation::tick(timestamp_ms, power.gnss_enabled);
     modules::geofences::tick(
         timestamp_ms,
         modules::navigation::snapshot(),

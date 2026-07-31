@@ -21,6 +21,7 @@ add_executable(${PROJECT_NAME}
     src/main.cpp
     src/navigation.cpp
     src/obd2.cpp
+    src/power_management.cpp
     src/sensor_events.cpp
     src/service_port.cpp
     src/server_transmission.cpp
@@ -37,6 +38,7 @@ if(GALILEOSKY_PLATFORM STREQUAL "desktop")
     target_sources(${PROJECT_NAME} PRIVATE
         platform/desktop/can_driver.cpp
         platform/desktop/gnss.cpp
+        platform/desktop/power.cpp
         platform/desktop/runner.cpp
         platform/desktop/service_port.cpp
         platform/desktop/server_transport.cpp
@@ -84,6 +86,7 @@ elseif(GALILEOSKY_PLATFORM STREQUAL "stm32g030")
     target_sources(${PROJECT_NAME} PRIVATE
         platform/stm32g030/can_driver.cpp
         platform/stm32g030/gnss.cpp
+        platform/stm32g030/power.cpp
         platform/stm32g030/runner.cpp
         platform/stm32g030/runtime.cpp
         platform/stm32g030/service_port.cpp
