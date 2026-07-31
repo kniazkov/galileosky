@@ -17,7 +17,7 @@ desktop-приложение для Linux или Windows. Прикладная �
 - 32 КБ Flash;
 - 8 КБ SRAM.
 
-SRAM разделена linker script на 7 КБ для статических данных и 1 КБ для стека.
+SRAM разделена linker script на 6 КБ для статических данных и 2 КБ для стека.
 Динамическое выделение памяти в целевой сборке не используется.
 
 ## Целевая сборка на Linux
@@ -65,6 +65,12 @@ sudo apt update
 sudo apt install -y cmake ninja-build g++ python3
 ```
 
+Сборка:
+
+```bash
+./scripts/build_linux.sh
+```
+
 Сборка и запуск JSONL-стенда:
 
 ```bash
@@ -98,7 +104,13 @@ pacman -S --needed mingw-w64-ucrt-x86_64-gcc \
 
 Каталог `C:\msys64\ucrt64\bin` должен находиться в `PATH`.
 
-Сборка и запуск JSONL-стенда из Command Prompt или PowerShell:
+Сборка из Command Prompt или PowerShell:
+
+```cmd
+scripts\build_windows.cmd
+```
+
+Сборка и запуск JSONL-стенда:
 
 ```cmd
 scripts\build_and_run_windows.cmd
@@ -108,4 +120,26 @@ scripts\build_and_run_windows.cmd
 
 ```cmd
 ctest --test-dir build\windows-desktop --output-on-failure
+```
+
+## Сквозная демонстрация
+
+Скрипт `tools/demo_end_to_end.py` запускает собранное desktop-приложение и
+проверяет цепочку `CAN → OBD-II → автомобиль → BASIC → сервер`. В консоли
+строки с `→` показывают команды, отправленные приложению, а строки с `←` —
+полученные ответы. Сценарий сначала передаёт скорость 120 км/ч, затем 145 км/ч
+и проверяет серверное сообщение о превышении порога.
+
+Linux:
+
+```bash
+./scripts/build_linux.sh
+python3 tools/demo_end_to_end.py
+```
+
+Windows:
+
+```cmd
+scripts\build_windows.cmd
+python tools\demo_end_to_end.py
 ```
