@@ -1,0 +1,232 @@
+{
+  "name": "Опрос ADC, дискретные входы и серверные события",
+  "steps": [
+    {
+      "send": {"id": 1, "command": "tick", "timestamp_ms": 0},
+      "expect": [
+        {
+          "id": 1,
+          "type": "state",
+          "full": false,
+          "state": {"timestamp_ms": 0, "revision": 1}
+        },
+        {"id": 1, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 2, "command": "adc_set", "channel": 0, "adc_value": 1000},
+      "expect": [{"id": 2, "type": "done"}]
+    },
+    {
+      "send": {"id": 3, "command": "adc_set", "channel": 1, "adc_value": 2000},
+      "expect": [{"id": 3, "type": "done"}]
+    },
+    {
+      "send": {"id": 4, "command": "digital_set", "channel": 0, "active": false},
+      "expect": [{"id": 4, "type": "done"}]
+    },
+    {
+      "send": {"id": 5, "command": "digital_set", "channel": 1, "active": false},
+      "expect": [{"id": 5, "type": "done"}]
+    },
+    {
+      "send": {"id": 6, "command": "digital_set", "channel": 2, "active": false},
+      "expect": [{"id": 6, "type": "done"}]
+    },
+    {
+      "send": {"id": 7, "command": "advance", "milliseconds": 100},
+      "expect": [
+        {
+          "id": 7,
+          "type": "state",
+          "full": false,
+          "state": {
+            "timestamp_ms": 100,
+            "revision": 2,
+            "sensors": {
+              "supply_voltage_adc": 1000,
+              "fuel_level_adc": 2000,
+              "ignition": false,
+              "door_open": false,
+              "alarm": false,
+              "valid_mask": 31,
+              "revision": 1
+            }
+          }
+        },
+        {"id": 7, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 8, "command": "adc_set", "channel": 0, "adc_value": 1500},
+      "expect": [{"id": 8, "type": "done"}]
+    },
+    {
+      "send": {"id": 9, "command": "digital_set", "channel": 1, "active": true},
+      "expect": [{"id": 9, "type": "done"}]
+    },
+    {
+      "send": {"id": 10, "command": "advance", "milliseconds": 100},
+      "expect": [
+        {
+          "id": 10,
+          "type": "state",
+          "full": false,
+          "state": {
+            "timestamp_ms": 200,
+            "revision": 3,
+            "sensors": {
+              "supply_voltage_adc": 1500,
+              "fuel_level_adc": 2000,
+              "ignition": false,
+              "door_open": true,
+              "alarm": false,
+              "valid_mask": 31,
+              "revision": 2
+            },
+            "server_transmission": {
+              "queued_messages": 1,
+              "dropped_messages": 0,
+              "sent_messages": 0,
+              "revision": 1
+            }
+          }
+        },
+        {"id": 10, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 11, "command": "digital_set", "channel": 1, "active": true},
+      "expect": [{"id": 11, "type": "done"}]
+    },
+    {
+      "send": {"id": 12, "command": "advance", "milliseconds": 100},
+      "expect": [
+        {
+          "id": 12,
+          "type": "state",
+          "full": false,
+          "state": {"timestamp_ms": 300, "revision": 4}
+        },
+        {"id": 12, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 13, "command": "digital_set", "channel": 1, "active": false},
+      "expect": [{"id": 13, "type": "done"}]
+    },
+    {
+      "send": {"id": 14, "command": "advance", "milliseconds": 100},
+      "expect": [
+        {
+          "id": 14,
+          "type": "state",
+          "full": false,
+          "state": {
+            "timestamp_ms": 400,
+            "revision": 5,
+            "sensors": {
+              "supply_voltage_adc": 1500,
+              "fuel_level_adc": 2000,
+              "ignition": false,
+              "door_open": false,
+              "alarm": false,
+              "valid_mask": 31,
+              "revision": 3
+            }
+          }
+        },
+        {"id": 14, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 15, "command": "digital_set", "channel": 0, "active": true},
+      "expect": [{"id": 15, "type": "done"}]
+    },
+    {
+      "send": {"id": 16, "command": "digital_set", "channel": 1, "active": true},
+      "expect": [{"id": 16, "type": "done"}]
+    },
+    {
+      "send": {"id": 17, "command": "digital_set", "channel": 2, "active": true},
+      "expect": [{"id": 17, "type": "done"}]
+    },
+    {
+      "send": {"id": 18, "command": "advance", "milliseconds": 100},
+      "expect": [
+        {
+          "id": 18,
+          "type": "state",
+          "full": false,
+          "state": {
+            "timestamp_ms": 500,
+            "revision": 6,
+            "sensors": {
+              "supply_voltage_adc": 1500,
+              "fuel_level_adc": 2000,
+              "ignition": true,
+              "door_open": true,
+              "alarm": true,
+              "valid_mask": 31,
+              "revision": 4
+            },
+            "server_transmission": {
+              "queued_messages": 4,
+              "dropped_messages": 0,
+              "sent_messages": 0,
+              "revision": 4
+            }
+          }
+        },
+        {"id": 18, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 19, "command": "server_online", "online": true},
+      "expect": [
+        {
+          "id": 19,
+          "type": "state",
+          "full": false,
+          "state": {
+            "server_transmission": {
+              "queued_messages": 0,
+              "dropped_messages": 0,
+              "sent_messages": 4,
+              "revision": 8
+            }
+          }
+        },
+        {
+          "id": 19,
+          "type": "server_tx",
+          "message_id": 1,
+          "payload": [2, 200, 0, 0, 0]
+        },
+        {
+          "id": 19,
+          "type": "server_tx",
+          "message_id": 2,
+          "payload": [1, 244, 1, 0, 0]
+        },
+        {
+          "id": 19,
+          "type": "server_tx",
+          "message_id": 3,
+          "payload": [2, 244, 1, 0, 0]
+        },
+        {
+          "id": 19,
+          "type": "server_tx",
+          "message_id": 4,
+          "payload": [3, 244, 1, 0, 0]
+        },
+        {"id": 19, "type": "done"}
+      ]
+    },
+    {
+      "send": {"id": 20, "command": "shutdown"},
+      "expect": [{"id": 20, "type": "done"}]
+    }
+  ]
+}
